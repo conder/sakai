@@ -2414,7 +2414,70 @@ public class SakaiScript extends AbstractWebService {
         }
     }
 
+       /**
+        * Find sites based on the string criteria given
+        *
+        * @param sessionid the id of a valid session
+        * @param criteria the string to search for in site title, etc.
+        * @param type optional site type to restrict search
+        * @return XML String listing sites matching criteria
+        *
+        */
+    @WebMethod
+    @Path("/searchForSite")
+    @Produces("text/plain")
+    @GET
+    public String searchForSites(
+        @WebParam(name = "sessionid", partName = "sessionid") @QueryParam("sessionid") String sessionid,
+        @WebParam(name = "criteria", partName = "criteria") @QueryParam("criteria") String criteria,
+        @WebParam(name = "type", partName = "type") @QueryParam("type") String type
+    )
+    {
+        Session session = establishSession(sessionid);
 
+        Document dom = Xml.createDocument();
+        Node list = dom.createElement("list");
+        dom.appendChild(list);
+        try {
+            List siteList = siteService.getSites(
+                SelectionType.ANY, // type
+                type, // ofType (String, String[], List, or Set)
+                criteria, // criteria
+                null, // property criteria
+                SortType.NONE, // sort type
+                null // page
+            );
+            if (siteList != null && siteList.size() > 0) {
+                Iterator i = siteList.iterator();
+                while ( i.hasNext() ) {
+                    Site site = (Site) i.next();
+                    Node item = dom.createElement("site");
+                    Node siteId = dom.createElement("siteId");
+                    siteId.appendChild( dom.createTextNode(site.getId()) );
+                    Node siteTitle = dom.createElement("siteTitle");
+                    siteTitle.appendChild( dom.createTextNode(site.getTitle()) );
+                    item.appendChild(siteId);
+                    item.appendChild(siteTitle);
+                    if (site.getProperties() != null) {
+                        for (Iterator j= site.getProperties().getPropertyNames(); j.hasNext(); )
+                        { 
+                            String name = (String) j.next(); 
+                            Node siteProperty = dom.createElement(name); 
+                            siteProperty.appendChild( 
+                                    dom.createTextNode((String)site.getProperties().get(name)) ); 
+                            item.appendChild(siteProperty); 
+                        }
+                    }
+                    list.appendChild(item);
+                }
+            }
+        } catch (Throwable t) { 
+            LOG.warn(this + ".searchForSites: Error encountered" + t.getMessage(), t); 
+        }
+        return Xml.writeDocumentToString(dom);
+    } 
+    
+    
     /**
      * Search all the users that match this criteria in id or email, first or last name, returning
      * a subset of records within the record range given (sorted by sort name).
