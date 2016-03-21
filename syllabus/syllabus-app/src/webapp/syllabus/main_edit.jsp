@@ -11,7 +11,7 @@
 	<sakai:view_content>
 
 <script>includeLatestJQuery('main_edit.jsp');</script>
-<link rel="stylesheet" href="/library/js/jquery/ui/1.11.3/themes/ui-lightness/jquery-ui.min.css" type="text/css" />
+<link rel="stylesheet" href="/library/webjars/jquery-ui/1.11.3/jquery-ui.min.css" type="text/css" />
 <script type="text/javascript" src="js/jquery-ui-timepicker-addon.js"></script>
 <script type="text/javascript" src="js/syllabus.js"></script>
 <link type="text/css" href="syllabus/css/syllabus.css" rel="stylesheet" media="screen" />
@@ -223,32 +223,32 @@
 		<h:panelGroup>
 		  <f:verbatim><ul class="navIntraTool actionToolbar" role="menu"></f:verbatim> 
 		  <%-- (gsilver) cannot pass a needed title attribute to these next items --%>
-		  <h:panelGroup rendered="#{SyllabusTool.editAble == 'true'}">
+		  <h:panelGroup rendered="#{SyllabusTool.addItem == 'true'}">
 			   <f:verbatim><li role="menuitem" class="firstToolBarItem"> <span></f:verbatim>
 				  	<h:commandLink action="#{SyllabusTool.processListNew}" 
 				  		styleClass="actionLink" 
 				  		onmousedown="assignWarningClick(this);"
-					    rendered="#{SyllabusTool.editAble == 'true'}">
+					    rendered="#{SyllabusTool.addIteme == 'true'}">
 					    	<h:outputText value="#{msgs.bar_new}"/>
 					</h:commandLink>
 				<f:verbatim></span></li></f:verbatim>
 			</h:panelGroup>
-			<h:panelGroup rendered="#{SyllabusTool.editAble == 'true'}">
+			<h:panelGroup rendered="#{SyllabusTool.bulkAddItem == 'true'}">
 				<f:verbatim><li role="menuitem" ><span></f:verbatim>
 				   	<h:commandLink
 							action="#{SyllabusTool.processListNewBulkMainEdit}"
 							onmousedown="assignWarningClick(this);"
-				   			rendered="#{SyllabusTool.editAble == 'true'}">
+				   			rendered="#{SyllabusTool.bulkAddItem == 'true'}">
 								<h:outputText value="#{msgs.bar_new_bulk}"/>
 				   	</h:commandLink>
 			   	<f:verbatim></span></li></f:verbatim>
 		   	</h:panelGroup>
-		   	<h:panelGroup rendered="#{SyllabusTool.editAble == 'true'}">
+		   	<h:panelGroup rendered="#{SyllabusTool.addOrEdit == 'true'}">
 			   	<f:verbatim><li role="menuitem" ><span></f:verbatim>
 				   	<h:commandLink
 							action="#{SyllabusTool.processStudentView}"
 							onmousedown="assignWarningClick(this);"
-				   			rendered="#{SyllabusTool.editAble == 'true'}">
+				   			rendered="#{SyllabusTool.addOrEdit == 'true'}">
 					    		<h:outputText value="#{msgs.bar_student_view}"/>
 					</h:commandLink>
 				<f:verbatim></span></li></f:verbatim>

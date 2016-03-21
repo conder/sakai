@@ -16,10 +16,11 @@ import org.apache.wicket.model.Model;
 import org.apache.wicket.model.StringResourceModel;
 import org.apache.wicket.spring.injection.annot.SpringBean;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
+import org.sakaiproject.gradebookng.tool.model.GbModalWindow;
 
 /**
  *
- * Cell panel for the student grade summary
+ * Wrapper for the student grade summary tabs
  *
  * @author Steve Swinsburg (steve.swinsburg@gmail.com)
  *
@@ -33,7 +34,7 @@ public class StudentGradeSummaryPanel extends Panel {
 	@SpringBean(name = "org.sakaiproject.gradebookng.business.GradebookNgBusinessService")
 	protected GradebookNgBusinessService businessService;
 
-	public StudentGradeSummaryPanel(final String id, final IModel<Map<String, Object>> model, final ModalWindow window) {
+	public StudentGradeSummaryPanel(final String id, final IModel<Map<String, Object>> model, final GbModalWindow window) {
 		super(id, model);
 
 		this.window = window;
@@ -55,7 +56,6 @@ public class StudentGradeSummaryPanel extends Panel {
 			@Override
 			public void onClick(final AjaxRequestTarget target) {
 				StudentGradeSummaryPanel.this.window.close(target);
-				target.appendJavaScript("GradebookGradeSummaryUtils.clearBlur();");
 			}
 		});
 
@@ -81,7 +81,7 @@ public class StudentGradeSummaryPanel extends Panel {
 		add(new AjaxBootstrapTabbedPanel("tabs", tabs) {
 			@Override
 			protected String getTabContainerCssClass() {
-				return "nav nav-pills";
+				return "nav nav-tabs";
 			}
 
 			@Override
@@ -95,11 +95,9 @@ public class StudentGradeSummaryPanel extends Panel {
 				target.add(studentNavigation);
 
 				target.appendJavaScript(
-						"new GradebookGradeSummary($(\"#" + getParent().getMarkupId() + "\"), " + showingStudentView + ");");
+						String.format("new GradebookGradeSummary($(\"#%s\"), %s);", getParent().getMarkupId(), showingStudentView));
 			}
 		});
-
-		add(new Label("heading", new StringResourceModel("heading.studentsummary", null, new Object[] { displayName, eid })));
 	}
 
 }

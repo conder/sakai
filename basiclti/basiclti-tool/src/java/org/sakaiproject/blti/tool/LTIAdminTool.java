@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
+import java.util.Iterator;
 
 import java.net.URLEncoder;
 import java.net.HttpURLConnection;
@@ -35,21 +36,21 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.imsglobal.basiclti.BasicLTIUtil;
-import org.imsglobal.basiclti.BasicLTIConstants;
-import org.imsglobal.lti2.LTI2Config;
-import org.imsglobal.lti2.LTI2Constants;
-import org.imsglobal.lti2.LTI2Messages;
-import org.imsglobal.lti2.LTI2Util;
-import org.imsglobal.lti2.ToolProxy;
-import org.imsglobal.lti2.ContentItem;
-import org.imsglobal.lti2.ToolProxyBinding;
+import org.tsugi.basiclti.BasicLTIUtil;
+import org.tsugi.basiclti.BasicLTIConstants;
+import org.tsugi.lti2.LTI2Config;
+import org.tsugi.lti2.LTI2Constants;
+import org.tsugi.lti2.LTI2Messages;
+import org.tsugi.lti2.LTI2Util;
+import org.tsugi.lti2.ToolProxy;
+import org.tsugi.lti2.ContentItem;
+import org.tsugi.lti2.ToolProxyBinding;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONValue;
-import static org.imsglobal.lti2.LTI2Util.getObject;
-import static org.imsglobal.lti2.LTI2Util.getArray;
-import static org.imsglobal.lti2.LTI2Util.getString;
+import static org.tsugi.lti2.LTI2Util.getObject;
+import static org.tsugi.lti2.LTI2Util.getArray;
+import static org.tsugi.lti2.LTI2Util.getString;
 import org.sakaiproject.basiclti.util.SakaiBLTIUtil;
 import org.sakaiproject.cheftool.Context;
 import org.sakaiproject.cheftool.JetspeedRunData;
@@ -1574,6 +1575,10 @@ public class LTIAdminTool extends VelocityPortletPaneledAction
 		// Extract the content item data
 		JSONObject item = contentItem.getItemOfType(ContentItem.TYPE_LTILINKITEM);
 		if ( item == null ) {
+			// Compliance with earlier draft
+			item = contentItem.getItemOfType(ContentItem.TYPE_LTILINK_OLD);
+		}
+		if ( item == null ) {
 			addAlert(state,rb.getString("error.contentitem.no.ltilink"));
 			switchPanel(state, "Error");
                         return;
@@ -1591,11 +1596,33 @@ public class LTIAdminTool extends VelocityPortletPaneledAction
 				"@id": "fa-bullseye",
 				"width": 50,
 				"height": 50
+			},
+			"lineItem" : {
+				"@type" : "LineItem",
+				"label" : "Chapter 12 quiz",
+				"reportingMethod" : "res:totalScore",
+				"assignedActivity" : {
+				"@id" : "http://toolprovider.example.com/assessment/66400",
+				"activity_id" : "a-9334df-33"
+			},
+			"custom": {
+				"imscert": "launch\u00bbWtSsVIge"
 			}
 		} */
 		String title = getString(item,"title");
 		String text = getString(item,"text");
 		String url = getString(item,"url");
+		JSONObject lineItem = getObject(item,"lineItem");
+		JSONObject custom = getObject(item,"custom");
+		String custom_str = "";
+		if ( custom != null ) {
+			Iterator<String> i = custom.keySet().iterator();
+                        while ( i.hasNext() ) {
+                                String key = (String) i.next();
+				String value = (String) custom.get(key);
+				custom_str += key + "=" + value + "\n";
+			}
+		}
 
 		// Much prefer this be an icon style like LTI 2.0
 		JSONObject iconObject = getObject(item, "icon");
@@ -1619,6 +1646,7 @@ public class LTIAdminTool extends VelocityPortletPaneledAction
 		if ( title != null ) reqProps.setProperty(LTIService.LTI_PAGETITLE, title);
 		if ( text != null ) reqProps.setProperty(LTIService.LTI_TITLE, text);
 		if ( icon != null ) reqProps.setProperty(LTIService.LTI_FA_ICON, icon);
+		if ( custom_str.length() > 0 ) reqProps.setProperty(LTIService.LTI_CUSTOM, custom_str);
 
 		// If we are not complete, we forward back to the configuration screen
 		boolean complete = title != null && text != null && url != null;

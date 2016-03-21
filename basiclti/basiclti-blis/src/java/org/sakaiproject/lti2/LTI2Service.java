@@ -36,17 +36,17 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.imsglobal.basiclti.BasicLTIConstants;
-import org.imsglobal.json.IMSJSONRequest;
-import org.imsglobal.lti2.LTI2Config;
-import org.imsglobal.lti2.LTI2Constants;
-import org.imsglobal.lti2.LTI2Messages;
-import org.imsglobal.lti2.LTI2Util;
-import org.imsglobal.lti2.ToolProxy;
-import org.imsglobal.lti2.ContentItem;
-import org.imsglobal.lti2.objects.Service_offered;
-import org.imsglobal.lti2.objects.StandardServices;
-import org.imsglobal.lti2.objects.ToolConsumer;
+import org.tsugi.basiclti.BasicLTIConstants;
+import org.tsugi.json.IMSJSONRequest;
+import org.tsugi.lti2.LTI2Config;
+import org.tsugi.lti2.LTI2Constants;
+import org.tsugi.lti2.LTI2Messages;
+import org.tsugi.lti2.LTI2Util;
+import org.tsugi.lti2.ToolProxy;
+import org.tsugi.lti2.ContentItem;
+import org.tsugi.lti2.objects.Service_offered;
+import org.tsugi.lti2.objects.StandardServices;
+import org.tsugi.lti2.objects.ToolConsumer;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -216,7 +216,7 @@ public class LTI2Service extends HttpServlet {
 			M_log.error("* LTI2 NOT CONFIGURED - Using Sample Data   *");
 			M_log.error("* Do not use this in production.  Test only *");
 			M_log.error("*********************************************");
-			// cnf = new org.imsglobal.lti2.LTI2ConfigSample();
+			// cnf = new org.tsugi.lti2.LTI2ConfigSample();
 			cnf = new SakaiLTI2Base();
 		}
 
@@ -225,6 +225,7 @@ public class LTI2Service extends HttpServlet {
 		ToolConsumer consumer = new ToolConsumer(profile_id+"", resourceUrl+"#", cnf);
 		consumer.allowSplitSecret();
 		consumer.allowHmac256();
+		consumer.addCapability(SakaiBLTIUtil.SAKAI_EXTENSIONS_ALL);
 		consumer.addCapability(SakaiBLTIUtil.CANVAS_PLACEMENTS_COURSENAVIGATION);
 		consumer.addCapability(SakaiBLTIUtil.CANVAS_PLACEMENTS_ASSIGNMENTSELECTION);
 		// Not yet supported in Sakai
@@ -440,7 +441,7 @@ public class LTI2Service extends HttpServlet {
 		Map jsonResponse = new TreeMap();
 		jsonResponse.put(LTI2Constants.CONTEXT,StandardServices.TOOLPROXY_ID_CONTEXT);
 		jsonResponse.put(LTI2Constants.TYPE, StandardServices.TOOLPROXY_ID_TYPE);
-		String serverUrl = ServerConfigurationService.getServerUrl();
+		String serverUrl = SakaiBLTIUtil.getOurServerUrl();
 		jsonResponse.put(LTI2Constants.JSONLD_ID, resourceUrl + SVC_tc_registration + "/" +profile_id);
 		jsonResponse.put(LTI2Constants.TOOL_PROXY_GUID, profile_id);
 		jsonResponse.put(LTI2Constants.CUSTOM_URL, resourceUrl + SVC_Settings + "/" + LTI2Util.SCOPE_ToolProxy + "/" +profile_id);

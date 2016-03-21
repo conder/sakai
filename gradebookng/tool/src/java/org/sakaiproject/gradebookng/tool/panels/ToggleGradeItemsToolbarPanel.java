@@ -1,7 +1,6 @@
 package org.sakaiproject.gradebookng.tool.panels;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +20,7 @@ import org.apache.wicket.model.Model;
 import org.apache.wicket.model.StringResourceModel;
 import org.apache.wicket.spring.injection.annot.SpringBean;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
+import org.sakaiproject.gradebookng.business.util.FormatHelper;
 import org.sakaiproject.gradebookng.tool.model.GradebookUiSettings;
 import org.sakaiproject.gradebookng.tool.pages.GradebookPage;
 import org.sakaiproject.service.gradebook.shared.Assignment;
@@ -68,7 +68,6 @@ public class ToggleGradeItemsToolbarPanel extends Panel {
 
 			categoryNamesToAssignments.get(categoryName).add(assignment);
 		}
-		Collections.sort(categoryNames);
 
 		add(new ListView<String>("categoriesList", categoryNames) {
 			private static final long serialVersionUID = 1L;
@@ -79,7 +78,20 @@ public class ToggleGradeItemsToolbarPanel extends Panel {
 
 				final GradebookPage gradebookPage = (GradebookPage) getPage();
 
-				categoryItem.add(new Label("category", categoryName));
+				GradebookUiSettings settings = gradebookPage.getUiSettings();
+				if (settings == null) {
+					settings = new GradebookUiSettings();
+					gradebookPage.setUiSettings(settings);
+				}
+
+				if (settings.getCategoryColor(categoryName) == null) {
+					settings.setCategoryColor(categoryName, gradebookPage.generateRandomRGBColorString());
+					gradebookPage.setUiSettings(settings);
+				}
+
+				final Label categoryLabel = new Label("category", categoryName);
+				categoryLabel.add(new AttributeModifier("data-category-color", settings.getCategoryColor(categoryName)));
+				categoryItem.add(categoryLabel);
 
 				final CheckBox categoryCheckbox = new CheckBox("categoryCheckbox");
 				categoryCheckbox.add(new AttributeModifier("value", categoryName));
@@ -99,7 +111,7 @@ public class ToggleGradeItemsToolbarPanel extends Panel {
 							gradebookPage.setUiSettings(settings);
 						}
 
-						assignmentItem.add(new Label("assignmentTitle", assignment.getName()));
+						assignmentItem.add(new Label("assignmentTitle", FormatHelper.abbreviateMiddle(assignment.getName())));
 
 						final CheckBox assignmentCheckbox = new AjaxCheckBox("assignmentCheckbox",
 								Model.of(Boolean.valueOf(settings.isAssignmentVisible(assignment.getId())))) {
@@ -126,12 +138,6 @@ public class ToggleGradeItemsToolbarPanel extends Panel {
 				categoryScoreFilter.setVisible(categoryName != getString(GradebookPage.UNCATEGORISED));
 				categoryScoreFilter.add(new Label("categoryScoreLabel",
 						new StringResourceModel("label.toolbar.categoryscorelabel", null, new Object[] { categoryName })));
-
-				GradebookUiSettings settings = gradebookPage.getUiSettings();
-				if (settings == null) {
-					settings = new GradebookUiSettings();
-					gradebookPage.setUiSettings(settings);
-				}
 
 				final CheckBox categoryScoreCheckbox = new AjaxCheckBox("categoryScoreCheckbox",
 						new Model<Boolean>(settings.isCategoryScoreVisible(categoryName))) {// Model.of(Boolean.valueOf(settings.isCategoryScoreVisible(category))))

@@ -3,6 +3,7 @@ package org.sakaiproject.gradebookng.tool.panels;
 import java.util.Map;
 
 import org.apache.wicket.AttributeModifier;
+import org.apache.wicket.behavior.AttributeAppender;
 import org.apache.wicket.event.IEvent;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.panel.Panel;
@@ -10,10 +11,8 @@ import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.spring.injection.annot.SpringBean;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
-import org.sakaiproject.gradebookng.business.model.GbGradeInfo;
 import org.sakaiproject.gradebookng.business.util.FormatHelper;
 import org.sakaiproject.gradebookng.tool.model.ScoreChangedEvent;
-import org.sakaiproject.service.gradebook.shared.Assignment;
 
 /**
  *
@@ -57,26 +56,25 @@ public class CategoryColumnCellPanel extends Panel {
 					if (studentUuid.equals(scoreChangedEvent.getStudentUuid()) &&
 							categoryId.equals(scoreChangedEvent.getCategoryId())) {
 
-						final Map<Assignment, GbGradeInfo> grades = CategoryColumnCellPanel.this.businessService
-								.getGradesForStudent(studentUuid);
 						final Double categoryAverage = CategoryColumnCellPanel.this.businessService.getCategoryScoreForStudent(categoryId,
-								studentUuid, grades);
+								studentUuid);
 
 						final String newCategoryAverage = (categoryAverage == null) ? getString("label.nocategoryscore")
 								: FormatHelper.formatDoubleAsPercentage(categoryAverage);
 						((Model<String>) getDefaultModel()).setObject(newCategoryAverage);
+
+						getParent().add(new AttributeAppender("class", "gb-score-dynamically-updated"));
+
 						scoreChangedEvent.getTarget().add(this);
+						scoreChangedEvent.getTarget().appendJavaScript(
+								String.format("$('#%s').closest('td').addClass('gb-score-dynamically-updated');",
+										this.getMarkupId()));
 					}
 				}
 			}
 		};
 		scoreLabel.setOutputMarkupId(true);
 		add(scoreLabel);
-
-		// accessibility
-		getParent().add(new AttributeModifier("scope", "row"));
-		getParent().add(new AttributeModifier("role", "rowheader"));
-
 	}
 
 	/**

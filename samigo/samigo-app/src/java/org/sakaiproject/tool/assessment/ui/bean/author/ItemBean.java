@@ -73,6 +73,8 @@ public class ItemBean
   private String itemId;
   private String itemType;
   private double itemScore= 0.0d;
+  private String itemScoreDisplayFlag= "true";
+  private double itemMinScore = 0.0d;
   private double itemDiscount = 0.0d;
   private String partialCreditFlag = "Defualt";
   private String[] answers;
@@ -2056,4 +2058,19 @@ public class ItemBean
 		this.mcmsPartialCredit = mcmsPartialCredit;
 	}
 
+	public double getItemMinScore() {
+		return itemMinScore;
+	}
+
+	public void setItemMinScore(double itemMinScore) {
+		this.itemMinScore = itemMinScore;
+	}
+
+	public String getItemScoreDisplayFlag() {
+		return itemScoreDisplayFlag;
+	}
+
+	public void setItemScoreDisplayFlag(String itemScoreDisplayFlag) {
+		this.itemScoreDisplayFlag = itemScoreDisplayFlag;
+	}
 }

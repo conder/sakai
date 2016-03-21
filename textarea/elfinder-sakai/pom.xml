@@ -7,7 +7,7 @@
     <parent>
         <artifactId>textarea-base</artifactId>
         <groupId>org.sakaiproject</groupId>
-        <version>11-SNAPSHOT</version>
+        <version>12-SNAPSHOT</version>
     </parent>
 
     <groupId>org.sakaiproject</groupId>
@@ -26,6 +26,10 @@
         <dependency>
             <groupId>org.sakaiproject.msgcntr</groupId>
             <artifactId>messageforums-api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.sakaiproject.assignment</groupId>
+            <artifactId>sakai-assignment-api</artifactId>
         </dependency>
         <dependency>
             <groupId>javax.servlet</groupId>

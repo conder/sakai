@@ -23,6 +23,7 @@
 package org.sakaiproject.tool.assessment.services;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.text.ParseException;
@@ -55,6 +56,7 @@ import org.apache.commons.math.util.MathUtils;
 import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.service.gradebook.shared.GradebookExternalAssessmentService;
 import org.sakaiproject.spring.SpringBeanLocator;
+import org.sakaiproject.tool.assessment.data.dao.grading.AssessmentGradingAttachment;
 import org.sakaiproject.tool.assessment.data.dao.grading.AssessmentGradingData;
 import org.sakaiproject.tool.assessment.data.dao.grading.ItemGradingAttachment;
 import org.sakaiproject.tool.assessment.data.dao.grading.ItemGradingData;
@@ -100,6 +102,9 @@ public class GradingService
   final String CLOSE_BRACKET = "\\}";
   final String CALCULATION_OPEN = "[["; // not regex safe
   final String CALCULATION_CLOSE = "]]"; // not regex safe
+  final String FORMAT_MASK = "0E0";
+  final Double MAX_THRESHOLD = 10000.0;
+  final Double MIN_THRESHOLD = 0.0001;
   /**
    * regular expression for matching the contents of a variable or formula name 
    * in Calculated Questions
@@ -906,7 +911,6 @@ public class GradingService
         }
         Long itemType = item.getTypeId();  
     	autoScore = (double) 0;
-
         itemGrading.setAssessmentGradingId(data.getAssessmentGradingId());
         //itemGrading.setSubmittedDate(new Date());
         itemGrading.setAgentId(agent);
@@ -976,6 +980,11 @@ public class GradingService
       //since the itr goes through each answer (multiple answers for a signle mc question), keep track
       //of its total score by itemId -> autoScore[]{user's score, total possible}
       Map<Long, Double[]> mcmcAllOrNothingCheck = new HashMap<Long, Double[]>();
+      
+      //collect min score information to determine if the auto score will need to be adjusted
+      //since there can be multiple questions store in map: itemId -> {user's score, minScore, # of answers}
+      Map<Long, Double[]> minScoreCheck = new HashMap<Long, Double[]>();
+      double totalAutoScoreCheck = 0;
       Map<Long, Integer> countMcmcAllItemGradings = new HashMap<Long, Integer>();
       //get item information to check if it's MCMS and Not Partial Credit
       Long itemType2 = -1l;
@@ -991,6 +1000,7 @@ public class GradingService
         	log.error("unable to retrive itemDataIfc for: " + publishedItemHash.get(itemId));
         	continue;
         }
+
         itemType2 = item.getTypeId();
         //get item information to check if it's MCMS and Not Partial Credit
         mcmsPartialCredit = item.getItemMetaDataByLabel(ItemMetaDataIfc.MCMS_PARTIAL_CREDIT);
@@ -1021,6 +1031,17 @@ public class GradingService
         	if(countMcmcAllItemGradings.containsKey(itemId))
         		count = ((Integer)countMcmcAllItemGradings.get(itemId)).intValue();
         	countMcmcAllItemGradings.put(itemId, new Integer(++count));
+        }
+        //min score check
+        if(item.getMinScore() != null){
+        	Double accumulatedScore = new Double(itemGrading.getAutoScore());
+        	Double itemParts = 1d;
+        	if(minScoreCheck.containsKey(itemId)){
+        		Double[] accumulatedScoreArr = minScoreCheck.get(itemId);
+        		accumulatedScore += accumulatedScoreArr[0];
+        		itemParts += accumulatedScoreArr[2];
+        	}
+        	minScoreCheck.put(itemId, new Double[]{accumulatedScore, item.getMinScore(), itemParts});
         }
       }
       
@@ -1072,6 +1093,7 @@ public class GradingService
     				  .get(itemGrading.getPublishedItemTextId())
     				  .get(itemGrading.getPublishedAnswerId()).effectiveScore);
     	  }
+    	  totalAutoScoreCheck = 0;
       }
       
       // if it's MCMS and Not Partial Credit and the score isn't 100% (totalAutoScoreCheck != itemScore),
@@ -1105,6 +1127,23 @@ public class GradingService
     	  }
       }
       
+      //if there is a minimum score value, then make sure the auto score is at least the minimum
+      //entry.getValue()[0] = total score for the question
+      //entry.getValue()[1] = min score
+      //entry.getValue()[2] = how many question answers to divide minScore across
+      for(Entry<Long, Double[]> entry : minScoreCheck.entrySet()){
+    	  if(entry.getValue()[0] < entry.getValue()[1]){
+    		  //reset all scores to 0 since the user didn't get all correct answers
+    		  iter = itemGradingSet.iterator();
+    		  while(iter.hasNext()){
+    			  ItemGradingData itemGrading = (ItemGradingData) iter.next();
+    			  if(itemGrading.getPublishedItemId().equals(entry.getKey())){
+    				  itemGrading.setAutoScore(new Double(entry.getValue()[1]/entry.getValue()[2]));
+    			  }
+    		  }
+    	  }
+      }
+      
       log.debug("****x4. "+(new Date()).getTime());
 
       // save#1: this itemGrading Set is a partial set of answers submitted. it contains new answers and
@@ -1117,11 +1156,14 @@ public class GradingService
       }
       log.debug("****x5. "+(new Date()).getTime());
 
+      
+
       // save#2: now, we need to get the full set so we can calculate the total score accumulate for the
       // whole assessment.
       Set fullItemGradingSet = getItemGradingSet(data.getAssessmentGradingId().toString());
       double totalAutoScore = getTotalAutoScore(fullItemGradingSet);
       data.setTotalAutoScore( Double.valueOf(totalAutoScore));
+     
       //log.debug("**#1 total AutoScore"+totalAutoScore);
       if (Double.compare((totalAutoScore + data.getTotalOverrideScore().doubleValue()),new Double("0").doubleValue())<0){
     	  data.setFinalScore( Double.valueOf("0"));
@@ -1381,6 +1423,7 @@ public class GradingService
           
           break;
     }
+    
     return autoScore;
   }
 
@@ -2659,6 +2702,39 @@ Here are the definition and 12 cases I came up with (lydia, 01/2006):
       return segments;
   }
 
+  
+  /**
+   * CALCULATED_QUESTION
+   * toScientificNotation() Takes a string representation of a number and returns
+   * a string representation of that number, in scientific notation.
+   * Numbers like 100, 0.01 will not be formatted (see values of MAX_THRESHOLD and MIN_THRESHOLD)
+   * @param numberStr
+   * @param decimalPlaces
+   * @return processed number string
+   */
+  public String toScientificNotation(String numberStr,int decimalPlaces){
+	  
+	  BigDecimal x = new BigDecimal(numberStr);
+	  x.setScale(decimalPlaces,RoundingMode.HALF_UP);	
+	  
+	  NumberFormat formatter;
+	  
+	  if (((( Math.abs(x.doubleValue())) >= MAX_THRESHOLD) || ( Math.abs(x.doubleValue()) <= MIN_THRESHOLD) 
+        || (numberStr.contains("e")) || numberStr.contains("E") ) 
+	    && (x.doubleValue() != 0)) {
+		  formatter = new DecimalFormat(FORMAT_MASK);
+	  } else {
+		  formatter = new DecimalFormat("0");
+	  }	  
+	  
+	  formatter.setRoundingMode(RoundingMode.HALF_UP);	  
+	  formatter.setMaximumFractionDigits(decimalPlaces);
+	  
+	  String formattedNumber = formatter.format(x);
+
+	  return formattedNumber.replace(",",".");
+  }
+  
   /**
    * CALCULATED_QUESTION
    * applyPrecisionToNumberString() takes a string representation of a number and returns
@@ -2968,7 +3044,7 @@ Here are the definition and 12 cases I came up with (lydia, 01/2006):
           SamigoExpressionParser parser = new SamigoExpressionParser(); // this will turn the expression into a number in string form
           String numericString = parser.parse(formula, decimalPlaces+1);
           if (this.isAnswerValid(numericString)) {
-              numericString = applyPrecisionToNumberString(numericString, decimalPlaces);
+              numericString = toScientificNotation(numericString, decimalPlaces);
               value = numericString;
           } else {
               throw new IllegalStateException("Invalid calculation formula ("+formula+") result ("+numericString+"), result could not be calculated");
@@ -3064,11 +3140,13 @@ Here are the definition and 12 cases I came up with (lydia, 01/2006):
 		  Double randomValue = minVal + (maxVal - minVal) * generator.nextDouble();
 		  
 		  // Trim off excess decimal points based on decimalPlaces value
-		  BigDecimal bd = new BigDecimal(randomValue);
+		  /*BigDecimal bd = new BigDecimal(randomValue);
 		  bd = bd.setScale(decimalPlaces,BigDecimal.ROUND_HALF_UP);
 		  randomValue = bd.doubleValue();
+		  String displayNumber = randomValue.toString();*/
 		  
-		  String displayNumber = randomValue.toString();
+		  String displayNumber = toScientificNotation(randomValue.toString(), decimalPlaces);
+		  
 		  // Remove ".0" if decimalPlaces ==0
 		  if (decimalPlaces == 0) {
 			  displayNumber = displayNumber.replace(".0", "");
@@ -3135,7 +3213,7 @@ Here are the definition and 12 cases I came up with (lydia, 01/2006):
 		  ItemGradingData itemCheck = (ItemGradingData) iter.next();
 		  Long itemId = itemCheck.getPublishedItemId();
 		  ItemDataIfc item = (ItemDataIfc) publishedItemHash.get(itemId);
-		  if (item.getTypeId().equals(TypeIfc.CALCULATED_QUESTION)) {
+		  if (item != null && (TypeIfc.CALCULATED_QUESTION).equals(item.getTypeId())) {
 	    	  return true;
 	      }
 	  }
@@ -3209,10 +3287,29 @@ Here are the definition and 12 cases I came up with (lydia, 01/2006):
 		}
 		return attachment;
 	}
+  
+  public AssessmentGradingAttachment createAssessmentGradingAttachment(
+		  AssessmentGradingData assessmentGrading, String resourceId, String filename,
+			String protocol) {
+	  AssessmentGradingAttachment attachment = null;
+		try {
+			attachment = PersistenceService.getInstance().
+	        getAssessmentGradingFacadeQueries().createAssessmentGradingtAttachment(assessmentGrading,
+					resourceId, filename, protocol);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return attachment;
+	}
 
   public void removeItemGradingAttachment(String attachmentId) {
 	  PersistenceService.getInstance().getAssessmentGradingFacadeQueries()
 	  .removeItemGradingAttachment(Long.valueOf(attachmentId));
+  }
+  
+  public void removeAssessmentGradingAttachment(String attachmentId) {
+	  PersistenceService.getInstance().getAssessmentGradingFacadeQueries()
+	  .removeAssessmentGradingAttachment(Long.valueOf(attachmentId));
   }
 
   public void saveOrUpdateAttachments(List list) {

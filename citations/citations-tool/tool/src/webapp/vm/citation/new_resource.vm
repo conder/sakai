@@ -21,13 +21,13 @@
  *
  **********************************************************************************
 -->
-<script type="text/javascript" src="#libraryLink('js/jquery/1.7.1/jquery-1.7.1.min.js')">	
+<script type="text/javascript" src="#libraryLink('webjars/jquery/1.11.3/jquery.min.js')">
 </script>
-<script type="text/javascript" src="#libraryLink('js/jquery/ui/1.11.3/jquery-ui.min.js')">	
+<script type="text/javascript" src="#libraryLink('webjars/jquery-ui/1.11.3/jquery-ui.min.js')">
 </script>
 <script type="text/javascript" src="#libraryLink('js/jquery/sortable/jquery.sortable.min.js')">
 </script>
-<link media="all" rel="stylesheet" type="text/css" href="#libraryLink('js/jquery-ui-latest/css/ui-lightness/jquery-ui.css')">
+<link media="all" rel="stylesheet" type="text/css" href="#libraryLink('webjars/jquery-ui/1.11.3/jquery-ui.min.css')">
 <link media="all" rel="stylesheet" type="text/css" href="/sakai-citations-tool/css/citations.css">
 <style type="text/css">
 span.searchTargetLink { margin-right:50px; }
@@ -136,12 +136,9 @@ span.searchTargetLink { margin-right:50px; }
 
           <li>
 			  <span class="searchTargetLink">
-			    <a name="PickResource" id="PickResource" title="$tlang.getString("resource.pick.resource")"  href="#">
+			    <a name="PickResource" id="PickResource" title="$tlang.getString("resource.pick.resource")"  href="#" onclick="javascript:document.getElementById('sakai_action').value='doPickResource'">
                     $tlang.getString("resource.resourcepicker")</td>
 			    </a>
-			    <span class="baseUrl" style="display:none;">#contentLink("Main")&sakai_action=doImportCitationFromResourceUrl</span>
-				<span class="pickerUrl" style="display:none;">/library/editor/FCKeditor/editor/filemanager/browser/default/browser.html?Connector=/sakai-fck-connector/web/editor/filemanager/browser/default/connectors/jsp/connector/$contentCollectionId&CurrentFolder=$contentCollectionId&langCode=en</span>
-			    <span class="popupTitle" style="display:none;">$tlang.getString("popup.title.resourcepicker")</span>
 			  </span>
           </li>
 		
@@ -164,6 +161,16 @@ span.searchTargetLink { margin-right:50px; }
 			<span class="popupTitle" style="display:none;">$tlang.getString("resource.import.file")</span>
 		  </span>
 	  </li>
+	  <!-- Markup for Export/RIS -->
+	  #if( $!exportUrlAll )
+		  <li>
+			  <span class="searchTargetLink">
+			    <a name="ExportCitation" id="ExportCitation" title="$tlang.getString("resource.export.file")"
+				   href="$exportUrlAll"> $tlang.getString("resource.export")
+			    </a>
+			  </span>
+		  </li>
+	  #end
 	</ul>
 	<div class="act">
 		<div class="citationsDisplay"#if(! ($collectionSize || $collectionSize < 1) && ! ($nestedSectionsSize || $nestedSectionsSize < 1)) style="display:none;"#end>

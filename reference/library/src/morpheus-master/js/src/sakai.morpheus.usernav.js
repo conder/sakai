@@ -5,7 +5,17 @@
 function toggleUserNav(event){
   event.preventDefault();
   $PBJQ('.Mrphs-userNav__subnav').toggleClass('is-hidden');
-  $PBJQ(this).toggleClass('is-clicked');
+
+  if (!$PBJQ('.Mrphs-userNav__subnav').hasClass('is-hidden')) {
+    // Add an invisible overlay to allow clicks to close the dropdown
+
+    var overlay = $('<div class="user-dropdown-overlay" />');
+    overlay.on('click', function () { $(event.target).trigger('click'); });
+
+    $('body').prepend(overlay);
+  } else {
+    $('.user-dropdown-overlay').remove();
+  }
 }
 
  // Logout Confirm
@@ -16,5 +26,5 @@ function toggleUserNav(event){
   });
 
 
-$PBJQ(".js-toggle-user-nav a#loginUser > .Mrphs-userNav__drop", "#loginLinks").on("click", toggleUserNav);
-$PBJQ(".js-toggle-user-nav .Mrphs-userNav__drop", "#loginLinks").on("click", toggleUserNav);
+$PBJQ(".js-toggle-user-nav a#loginUser > .Mrphs-userNav__drop-btn", "#loginLinks").on("click", toggleUserNav);
+$PBJQ(".js-toggle-user-nav .Mrphs-userNav__drop-btn", "#loginLinks").on("click", toggleUserNav);

@@ -15,6 +15,7 @@ import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
+import org.apache.wicket.model.ResourceModel;
 import org.apache.wicket.spring.injection.annot.SpringBean;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
 import org.sakaiproject.gradebookng.tool.model.GbSettings;
@@ -30,10 +31,14 @@ public class SettingsGradeReleasePanel extends Panel {
 	IModel<GbSettings> model;
 
 	Label preview;
+	Label minimumOptions;
 
-	public SettingsGradeReleasePanel(final String id, final IModel<GbSettings> model) {
+	private boolean expanded;
+
+	public SettingsGradeReleasePanel(final String id, final IModel<GbSettings> model, final boolean expanded) {
 		super(id, model);
 		this.model = model;
+		this.expanded = expanded;
 	}
 
 	@Override
@@ -46,14 +51,19 @@ public class SettingsGradeReleasePanel extends Panel {
 			@Override
 			protected void onEvent(final AjaxRequestTarget ajaxRequestTarget) {
 				settingsGradeReleasePanel.add(new AttributeModifier("class", "panel-collapse collapse in"));
+				expanded = true;
 			}
 		});
 		settingsGradeReleasePanel.add(new AjaxEventBehavior("hidden.bs.collapse") {
 			@Override
 			protected void onEvent(final AjaxRequestTarget ajaxRequestTarget) {
 				settingsGradeReleasePanel.add(new AttributeModifier("class", "panel-collapse collapse"));
+				expanded = false;
 			}
 		});
+		if (expanded) {
+			settingsGradeReleasePanel.add(new AttributeModifier("class", "panel-collapse collapse in"));
+		}
 		add(settingsGradeReleasePanel);
 
 		// display released items to students
@@ -103,8 +113,9 @@ public class SettingsGradeReleasePanel extends Panel {
 
 			@Override
 			protected void onUpdate(final AjaxRequestTarget target) {
-				// update preview
+				// update preview and validation
 				target.add(SettingsGradeReleasePanel.this.preview);
+				target.add(SettingsGradeReleasePanel.this.minimumOptions);
 			}
 		};
 		letterGrade.setOutputMarkupId(true);
@@ -117,8 +128,9 @@ public class SettingsGradeReleasePanel extends Panel {
 
 			@Override
 			protected void onUpdate(final AjaxRequestTarget target) {
-				// update preview
+				// update preview and validation
 				target.add(SettingsGradeReleasePanel.this.preview);
+				target.add(SettingsGradeReleasePanel.this.minimumOptions);
 			}
 		};
 		percentage.setOutputMarkupId(true);
@@ -131,12 +143,45 @@ public class SettingsGradeReleasePanel extends Panel {
 
 			@Override
 			protected void onUpdate(final AjaxRequestTarget target) {
-				// update preview
+				// update preview and validation
 				target.add(SettingsGradeReleasePanel.this.preview);
+				target.add(SettingsGradeReleasePanel.this.minimumOptions);
 			}
 		};
 		points.setOutputMarkupId(true);
 		courseGradeType.add(points);
+
+		// minimum options label. only shows if we have too few selected
+		this.minimumOptions = new Label("minimumOptions", new ResourceModel("settingspage.displaycoursegrade.notenough")) {
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public boolean isVisible() {
+				final GradebookInformation settings = SettingsGradeReleasePanel.this.model.getObject().getGradebookInformation();
+
+				// validation label
+				if (settings.isCourseGradeDisplayed()) {
+					int displayOptions = 0;
+					if (settings.isCourseLetterGradeDisplayed()) {
+						displayOptions++;
+					}
+					if (settings.isCourseAverageDisplayed()) {
+						displayOptions++;
+					}
+					if (settings.isCoursePointsDisplayed()) {
+						displayOptions++;
+					}
+					if (displayOptions == 0) {
+						System.out.println("visible");
+						return true;
+					}
+				}
+				return false;
+			}
+
+		};
+		this.minimumOptions.setOutputMarkupPlaceholderTag(true);
+		courseGradeType.add(this.minimumOptions);
 
 		// preview model, uses settings to determine out what to display
 		final Model<String> previewModel = new Model<String>() {
@@ -211,5 +256,9 @@ public class SettingsGradeReleasePanel extends Panel {
 			}
 		});
 
+	}
+
+	public boolean isExpanded() {
+		return expanded;
 	}
 }

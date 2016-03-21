@@ -3,6 +3,8 @@
 <%@ taglib uri="http://sakaiproject.org/jsf/sakai" prefix="sakai" %>
 <%@ taglib uri="http://sakaiproject.org/jsf/syllabus" prefix="syllabus" %>
 <%@ taglib uri="http://myfaces.apache.org/tomahawk" prefix="t"%>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
+
 <% response.setContentType("text/html; charset=UTF-8"); %>
 <f:view>
 
@@ -23,11 +25,11 @@
 
 <script>includeLatestJQuery('main.jsp');</script>
 <script type="text/javascript" src="js/jqueryui-editable.js"></script>
-<script type="text/javascript" src="/library/js/moment/2.4.0/moment.min.js"></script>
+<script type="text/javascript" src="/library/webjars/momentjs/2.11.1/min/moment.min.js"></script>
 <script type="text/javascript" src="js/syllabus.js"></script>
 <sakai:stylesheet path="/syllabus/css/jqueryui-editable.css" />
 <script type="text/javascript" src="js/jquery-ui-timepicker-addon.js"></script>
-<link rel="stylesheet" href="/library/js/jquery/ui/1.11.3/themes/ui-lightness/jquery-ui.min.css" type="text/css" />
+<link rel="stylesheet" href="/library/webjars/jquery-ui/1.11.3/jquery-ui.min.css" type="text/css" />
 <sakai:stylesheet path="/syllabus/css/syllabus.css" />
 
 <script type="text/javascript">
@@ -119,8 +121,9 @@
 	<h:form id="syllabus">
 		<%--gsilver: would be best if used all sakai tags, or none, 2 blocks
 		following just gets tries to get around the mix --%>		
-		<syllabus:syllabus_ifnot test="#{SyllabusTool.editAble}">
-			<f:verbatim><ul class="navIntraTool actionToolbar">
+		<f:verbatim><ul class="navIntraTool actionToolbar"></f:verbatim>
+				<c:if test="${SyllabusTool.addItem}">
+				<f:verbatim>
 				<li class="firstToolBarItem">
 					<span>
 							<a href="javascript:void(0)" onclick="showConfirmAddHelper();">
@@ -128,7 +131,10 @@
 							</a>
 							<input type="hidden" id="siteId" value="</f:verbatim><h:outputText value="#{SyllabusTool.siteId}"/><f:verbatim>">
 					</span>
-				</li>
+				</li></f:verbatim>
+				</c:if>
+				<c:if test="${SyllabusTool.bulkAddItem}">
+				<f:verbatim>
 				<li>
 					<span>
 					</f:verbatim>
@@ -138,6 +144,10 @@
 					<f:verbatim>
 					</span>
 				</li>
+				</f:verbatim>
+				</c:if>
+				<c:if test="${SyllabusTool.bulkEdit}">
+				<f:verbatim>
 				<li>
 					<span>
 					</f:verbatim>
@@ -147,6 +157,10 @@
 					<f:verbatim>
 					</span>
 				</li>
+				</f:verbatim>
+				</c:if>
+				<c:if test="${SyllabusTool.redirect}">
+				<f:verbatim>
 				<li>
 					<span>
 					</f:verbatim>
@@ -156,6 +170,9 @@
 					<f:verbatim>
 					</span>
 				</li>
+				</f:verbatim>
+				</c:if>
+				<f:verbatim>
 				<li>
 					<span>
 							<a href="javascript:void(0)" id="expandLink" onclick="expandAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
@@ -181,43 +198,7 @@
 					<f:verbatim>
 					</span>
 				</li>
-			</ul></f:verbatim>			
-		
-		</syllabus:syllabus_ifnot>
-
-		<syllabus:syllabus_if test="#{SyllabusTool.editAble}" >
-
-			<f:verbatim>
-				<ul class="navIntraTool actionToolbar">
-					<li class="firstToolBarItem">
-						<span>
-								<a href="javascript:void(0)" id="expandLink" onclick="expandAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
-									<img src="/library/image/silk/arrow_out.png"/>&nbsp;&nbsp;
-									</f:verbatim>
-										<h:outputText value="#{msgs.expandAll}"/>
-									<f:verbatim>
-								</a>
-								<a href="javascript:void(0)" id="collapseLink" style="display:none" onclick="collapseAccordion('<%= org.sakaiproject.util.Web.escapeJavascript(thisId)%>')">
-									<img src="/library/image/silk/arrow_in.png"/>&nbsp;&nbsp;
-									</f:verbatim>
-										<h:outputText value="#{msgs.collapseAll}"/>
-									<f:verbatim>
-								</a>
-						</span>
-					</li>
-					<li>
-						<span>
-							</f:verbatim>
-								<h:outputLink id="printIcon" value="javascript:printFriendly('#{SyllabusTool.printFriendlyUrl}');">
-									<h:outputText value="#{msgs.printView}"/>
-								</h:outputLink>
-							<f:verbatim>
-						</span>
-					</li>
-				</ul>
-			</f:verbatim>			
-				
-			</syllabus:syllabus_if>
+				</ul></f:verbatim>
 			<syllabus:syllabus_if test="#{SyllabusTool.syllabusItem.redirectURL}">
 					<f:verbatim>
 						<div>

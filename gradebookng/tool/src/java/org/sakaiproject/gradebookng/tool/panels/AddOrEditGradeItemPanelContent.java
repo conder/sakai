@@ -19,6 +19,7 @@ import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.spring.injection.annot.SpringBean;
+import org.sakaiproject.gradebookng.business.GbCategoryType;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
 import org.sakaiproject.gradebookng.business.util.FormatHelper;
 import org.sakaiproject.service.gradebook.shared.Assignment;
@@ -48,6 +49,11 @@ public class AddOrEditGradeItemPanelContent extends Panel {
 		final Gradebook gradebook = this.businessService.getGradebook();
 
 		final Assignment assignment = assignmentModel.getObject();
+
+		boolean categoriesEnabled = true;
+		if (gradebook.getCategory_type() == GbCategoryType.NO_CATEGORY.getValue()) {
+			categoriesEnabled = false;
+		}
 
 		// title
 		final TextField<String> title = new TextField<String>("title", new PropertyModel<String>(assignmentModel, "name")) {
@@ -84,11 +90,15 @@ public class AddOrEditGradeItemPanelContent extends Panel {
 		add(dueDate);
 
 		// category
-		final List<CategoryDefinition> categories = this.businessService.getGradebookCategories();
-
+		final List<CategoryDefinition> categories = new ArrayList<>();
 		final Map<Long, CategoryDefinition> categoryMap = new LinkedHashMap<>();
-		for (final CategoryDefinition category : categories) {
-			categoryMap.put(category.getId(), category);
+
+		if (categoriesEnabled) {
+			categories.addAll(this.businessService.getGradebookCategories());
+
+			for (final CategoryDefinition category : categories) {
+				categoryMap.put(category.getId(), category);
+			}
 		}
 
 		final DropDownChoice<Long> categoryDropDown = new DropDownChoice<Long>("category",
@@ -113,7 +123,13 @@ public class AddOrEditGradeItemPanelContent extends Panel {
 					}
 
 				});
+
+		// if we don't have a category assigned we want the 'Choose One' message. setNullValid = false
+		// if we have a category we want to be able to clear it. setNullValid = true
 		categoryDropDown.setNullValid(false);
+		if (assignment.getCategoryId() != null) {
+			categoryDropDown.setNullValid(true);
+		}
 		categoryDropDown.setVisible(!categories.isEmpty());
 		add(categoryDropDown);
 
@@ -137,6 +153,7 @@ public class AddOrEditGradeItemPanelContent extends Panel {
 			}
 		};
 		extraCredit.setOutputMarkupId(true);
+		extraCredit.setEnabled(!assignment.isCategoryExtraCredit());
 		add(extraCredit);
 
 		// released

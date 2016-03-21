@@ -360,10 +360,39 @@ public class MoreSiteViewImpl extends AbstractSiteViewImpl
 
 			}
 		}
-		renderContextMap.put("tabsMoreTerms", tabsMoreTerms);
+
+		SitePanesArrangement sitesByPane = arrangeSitesIntoPanes(tabsMoreTerms);
+		renderContextMap.put("tabsMoreTermsLeftPane", sitesByPane.sitesInLeftPane);
+		renderContextMap.put("tabsMoreTermsRightPane", sitesByPane.sitesInRightPane);
+
 		renderContextMap.put("tabsMoreSortedTermList", tabsMoreSortedTermList);
 
 	}
+
+	private static class SitePanesArrangement {
+		public Map<String, List> sitesInLeftPane = new TreeMap<String, List>();
+		public Map<String, List> sitesInRightPane = new TreeMap<String, List>();
+	}
+
+	private SitePanesArrangement arrangeSitesIntoPanes(Map<String, List> tabsMoreTerms) {
+		SitePanesArrangement result = new SitePanesArrangement();
+
+		for (String term : tabsMoreTerms.keySet()) {
+			result.sitesInLeftPane.put(term, new ArrayList());
+			result.sitesInRightPane.put(term, new ArrayList());
+
+			for (Map site : (List<Map>)tabsMoreTerms.get(term)) {
+				if (isCourseType((String)site.get("siteType"))) {
+					result.sitesInLeftPane.get(term).add(site);
+				} else {
+					result.sitesInRightPane.get(term).add(site);
+				}
+			}
+		}
+
+		return result;
+	}
+
 
 	/*
 	 * (non-Javadoc)

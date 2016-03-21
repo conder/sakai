@@ -93,7 +93,7 @@ import au.com.bytecode.opencsv.CSVParser;
 import org.sakaiproject.portal.util.ToolUtils;
 import org.sakaiproject.lti.api.LTIService;
 import org.sakaiproject.basiclti.util.SakaiBLTIUtil;
-import org.imsglobal.lti2.ContentItem;
+import org.tsugi.lti2.ContentItem;
 
 /**
  * Backing bean for Simple pages
@@ -207,6 +207,8 @@ public class SimplePageBean {
 	public boolean comments;
 	public boolean forcedAnon;
 	public boolean groupOwned;
+	public boolean groupOwnedIndividual;
+	public boolean seeOnlyOwn;
     
 	public String questionType;
     public String questionText, questionCorrectText, questionIncorrectText;
@@ -279,7 +281,7 @@ public class SimplePageBean {
 
     // almost ISO format. real thing can't be done until Java 7. uses -0400 rather than -04:00
     //        SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssZ");
-        SimpleDateFormat isoDateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+	SimpleDateFormat isoDateFormat = getIsoDateFormat();
 	
 	public void setPeerEval(boolean peerEval) {
 		this.peerEval = peerEval;
@@ -335,19 +337,18 @@ public class SimplePageBean {
 	public void setPeerEvalAllowSelfGrade(boolean self){
 		this.peerEvalAllowSelfGrade = self;
 	}
-	ArrayList<String> rubricPeerGrades, rubricPeerCategories;
+	ArrayList<String> rubricPeerGrades;
 	public String rubricPeerGrade;
 	
 	public void setRubricPeerGrade(String rubricPeerGrade) {
+		if (rubricPeerGrade == null || rubricPeerGrade.equals(""))
+		    return;
 		this.rubricPeerGrade = rubricPeerGrade;
 		
-		if(rubricPeerGrades==null) {
+		if(rubricPeerGrades == null) {
 			rubricPeerGrades = new ArrayList<String>();
-			rubricPeerCategories = new ArrayList<String>();
 		}
-		int theColon=rubricPeerGrade.lastIndexOf(":");
-		rubricPeerGrades.add(rubricPeerGrade.substring(theColon + 1));
-		rubricPeerCategories.add(rubricPeerGrade.substring(0,theColon));
+		rubricPeerGrades.add(rubricPeerGrade);
 	}
     
 	// Caches
@@ -374,10 +375,11 @@ public class SimplePageBean {
 	private Map<Long, List<SimplePageItem>> itemsCache = new HashMap<Long, List<SimplePageItem>> ();
 	private Map<String, SimplePageLogEntry> logCache = new HashMap<String, SimplePageLogEntry>();
 	private Map<Long, Boolean> completeCache = new HashMap<Long, Boolean>();
-    private Map<Long, Boolean> visibleCache = new HashMap<Long, Boolean>();
-    // this one needs to be global
-	private static Cache groupCache = null;   // itemId => grouplist
-	private static Cache resourceCache = null;
+	private Map<Long, Boolean> visibleCache = new HashMap<Long, Boolean>();
+	// this one needs to be global
+	static MemoryService memoryService = (MemoryService)org.sakaiproject.component.cover.ComponentManager.get("org.sakaiproject.memory.api.MemoryService");
+	private static Cache groupCache = memoryService.newCache("org.sakaiproject.lessonbuildertool.tool.beans.SimplePageBean.groupCache");  // itemId => grouplist
+	private static Cache resourceCache = memoryService.newCache("org.sakaiproject.lessonbuildertool.tool.beans.SimplePageBean.resourceCache");
 	protected static final int DEFAULT_EXPIRATION = 10 * 60;
 
 	public static class PathEntry {
@@ -554,10 +556,6 @@ public class SimplePageBean {
 	    return messageLocator;
 	}
 
-	static MemoryService memoryService = null;
-	public void setMemoryService(MemoryService m) {
-	    memoryService = m;
-	}
 
         private HttpServletResponse httpServletResponse;
 	public void setHttpServletResponse(HttpServletResponse httpServletResponse) {
@@ -593,20 +591,15 @@ public class SimplePageBean {
 	    }
 	}
 
+ 	SimpleDateFormat getIsoDateFormat() {
+ 	    SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+ 	    TimeZone tz = TimeService.getLocalTimeZone();
+ 	    format.setTimeZone(tz);
+ 	    return format;
+ 	}
 
+	// Don't put things here. It isn't always called.
 	public void init () {	
-		TimeZone tz = TimeService.getLocalTimeZone();
-		isoDateFormat.setTimeZone(tz);
-
-		if (groupCache == null) {
-			groupCache = memoryService.createCache(
-					"org.sakaiproject.lessonbuildertool.tool.beans.SimplePageBean.groupCache",
-					new SimpleConfiguration<>(CACHE_MAX_ENTRIES, CACHE_TIME_TO_LIVE_SECONDS, CACHE_TIME_TO_IDLE_SECONDS));
-		}
-		
-		if (resourceCache == null) {
-			resourceCache = memoryService.getCache("org.sakaiproject.lessonbuildertool.tool.beans.SimplePageBean.resourceCache");
-		}
 	}
 
 	static PagePickerProducer pagePickerProducer = null;
@@ -1605,9 +1598,11 @@ public class SimplePageBean {
 						studItem.setSakaiId(page.getTopParent().toString());
 						
 						studItem.setAttributeString(peerEval);
+						studItem.setGroupOwned(item.isGroupOwned());
 						studItem.setName("peerEval");
 						studItem.setPageId(-10L);
 						studItem.setType(SimplePageItem.PEEREVAL); // peer eval defined in SimplePageItem.java
+						studItem.setId(item.getId());
 						items.add(0,studItem);
 					}
 					if(item != null && item.getShowComments() != null && item.getShowComments()) {
@@ -4572,6 +4567,14 @@ public class SimplePageBean {
 		    if (itemPage.getReleaseDate() != null && itemPage.getReleaseDate().after(new Date()))
 			return false;
 		} else if (page != null && page.getOwner() != null && (item.getType() == SimplePageItem.RESOURCE || item.getType() == SimplePageItem.MULTIMEDIA)) {
+
+		    // check for inline types. No resource to check. Since this section is for student page, no groups either
+		    if (item.getType() == SimplePageItem.MULTIMEDIA) {
+			String displayType = item.getAttribute("multimediaDisplayType");
+			if ("1".equals(displayType) || "3".equals(displayType))
+			    return true;
+		    }
+
 		    // This code is taken from LessonBuilderAccessService, mostly
 
 		    // for student pages, we give people access to files in the owner's worksite
@@ -6303,6 +6306,8 @@ public class SimplePageBean {
 	}
 	
 	// May add or edit comments
+        // handle situation where user opens CKedit and then opens a
+        // different page. So we can't depend upon current page.
 	public String addComment() {
 		if (!checkCsrf())
 		    return "permission-failed";
@@ -6318,6 +6323,57 @@ public class SimplePageBean {
 		StringBuilder error = new StringBuilder();
 		comment = FormattedText.processFormattedText(comment, error);
 		
+		// get this from itemId to avoid issues if someone has opened
+		// a different page in another window
+		Long currentPageId = null;
+		SimplePageItem commentItem = findItem(itemId);
+		if (commentItem == null) {
+		    // should be impossible
+		    return "failure";
+		}
+		currentPageId = commentItem.getPageId();
+		if (currentPageId == -1L) {
+		    // student page. item doesn't have pageid because the same item
+		    // is on all pages / subpages for that student. instead the sakaid
+		    // points to a studentpage entry.
+		    long studentPageId = -1L;
+		    try {
+			studentPageId = Long.parseLong(commentItem.getSakaiId());
+		    } catch (Exception e){}
+		    SimpleStudentPage studentPage = null;
+		    if (studentPageId != -1L) 
+			studentPage = simplePageToolDao.findStudentPage(studentPageId);
+		    // this gets the top-level student page for this student.
+		    // that seems good enough for testing whether the user has successfully gotten to the page
+		    if (studentPage != null)
+			currentPageId = studentPage.getPageId();
+		}
+		if (currentPageId == null) {
+		    // should be impossible
+		    return "failure";
+		}
+		SimplePage currentPage = getPage(currentPageId);
+		if (currentPage == null) {
+		    // should be impossible
+		    return "failure";
+		}
+
+		// student page
+		boolean isStudent = (currentPage.getOwner() != null);
+
+		// testing whether user can get to the page is complex.
+		// but you can't add a comment to a page you haven't seen,
+		// so just check that. After that we know user can read page.
+                // Use methods that let us pass page so we don't use current page
+		// Student pages don't use avaiable / visible tests
+
+		if (!simplePageToolDao.isPageVisited(currentPageId, getCurrentUserId(), currentPage.getOwner()) ||
+		    !isStudent && !isItemAvailable(commentItem, currentPageId) ||
+		    !isStudent && !isItemVisible(commentItem, currentPage, true)) {
+		    // security failure
+		    return "failure";
+		}		    
+
 		if(comment == null || comment.equals("")) {
 			setErrMessage(messageLocator.getMessage("simplepage.empty-comment-error"));
 			return "failure";
@@ -6327,14 +6383,14 @@ public class SimplePageBean {
 			String userId = UserDirectoryService.getCurrentUser().getId();
 			
 			Double grade = null;
-			if(findItem(itemId).getGradebookId() != null) {
+			if(commentItem.getGradebookId() != null) {
 				List<SimplePageComment> comments = simplePageToolDao.findCommentsOnItemByAuthor(itemId, userId);
 				if(comments != null && comments.size() > 0) {
 					grade = comments.get(0).getPoints();
 				}
 			}
 			
-			SimplePageComment commentObject = simplePageToolDao.makeComment(itemId, getCurrentPage().getPageId(), userId, comment, IdManager.getInstance().createUuid(), html);
+			SimplePageComment commentObject = simplePageToolDao.makeComment(itemId, currentPageId, userId, comment, IdManager.getInstance().createUuid(), html);
 			commentObject.setPoints(grade);
 			
 			saveItem(commentObject, false);
@@ -6350,7 +6406,7 @@ public class SimplePageBean {
 		}
 		
 		if(getCurrentPage().getOwner() != null) {
-			SimpleStudentPage student = simplePageToolDao.findStudentPage(getCurrentPage().getTopParent());
+			SimpleStudentPage student = simplePageToolDao.findStudentPage(currentPage.getTopParent());
 			student.setLastCommentChange(new Date());
 			update(student, false);
 		}
@@ -6967,6 +7023,14 @@ public class SimplePageBean {
 			page.setRequired(required);
 			page.setPrerequisite(prerequisite);
 			page.setGroupOwned(groupOwned);
+			if (groupOwnedIndividual)
+			    page.setAttribute("group-eval-individual", "true");
+			else
+			    page.removeAttribute("group-eval-individual");
+			if (seeOnlyOwn)
+			    page.setAttribute("see-only-own", "true");
+			else
+			    page.removeAttribute("see-only-own");
 			
 			page.setShowPeerEval(peerEval);
 			
@@ -7541,38 +7605,166 @@ public class SimplePageBean {
 		update(item);
 		return "success";
 	}
+
 	public String savePeerEvalResult() {
 		
 		String userId = getCurrentUserId();
-		String gradeeId= getCurrentPage().getOwner();
 		
-		if (!itemOk(itemId)) {
+		// can evaluate if this is a student page and we're in the site
+		// and the page has a rubric
+		if (getCurrentPage().getOwner() == null || !canReadPage()) {		    
 		    setErrMessage(messageLocator.getMessage("simplepage.permissions-general"));
 		    return "permission-failed";
 		}
+
+		// does page have rubric?
+    
+		SimpleStudentPage studentPage = simplePageToolDao.findStudentPage(currentPage.getTopParent());
+		SimplePageItem item = simplePageToolDao.findItem(studentPage.getItemId());
+		if(item != null && item.getShowPeerEval() != null && item.getShowPeerEval())
+		    ;
+		else {
+		    setErrMessage(messageLocator.getMessage("simplepage.permissions-general"));
+		    return "permission-failed";
+		}
+
 		if (!checkCsrf())
 		    return "permission-failed";
 		
-		List<SimplePagePeerEvalResult> result = simplePageToolDao.findPeerEvalResult(getCurrentPage().getPageId(), userId, gradeeId); 
-		if(result != null) {
-			//set the existing deleted flag=true;
-			for(int i=0; i<result.size(); i++){
-				SimplePagePeerEvalResult rst = result.get(i);
-				rst.setSelected(false);
-				update(rst,false);
-			}
+		if (rubricPeerGrades == null)
+		    return "success"; // nothing to do
+
+		// construct row text -> row id
+		// old entries are by text, so need to be able to map them to id
+
+		Map<String, Long> rowMap = new HashMap<String, Long>();
+
+		SimplePageItem i = findItem(itemId);
+                List<Map> categories = (List<Map>) i.getJsonAttribute("rows");
+		if (categories == null)   // not valid to do update on item without rubic
+		    return "fail";
+		for (Map cat: categories) {
+		    String rowText = String.valueOf(cat.get("rowText"));
+		    String rowId = String.valueOf(cat.get("id"));
+		    rowMap.put(rowText, new Long(rowId));
 		}
-		//rubricPeerGrades, rubricPeerCategories
-			for(int i=0; i<rubricPeerGrades.size(); i++){
-				String rowText = rubricPeerCategories.get(i);
-				int columnValue =Integer.parseInt(rubricPeerGrades.get(i));
-				SimplePagePeerEvalResult ret = simplePageToolDao.makePeerEvalResult(getCurrentPage().getPageId(), getCurrentPage().getOwner(),userId, rowText, columnValue);
-				saveItem(ret,false);		
+
+		// set up data for permission checks
+		// user is in site because we check canRead
+		String owner = getCurrentPage().getOwner();
+		String currentUser = getCurrentUserId();
+		List<String>groupMembers = studentPageGroupMembers(item, null);
+		boolean evalIndividual = (item.isGroupOwned() && "true".equals(item.getAttribute("group-eval-individual")));
+		boolean gradingSelf = Boolean.parseBoolean(item.getAttribute("rubricAllowSelfGrade"));
+		// check is down below at canSubmit.
+
+		// data from user: build map target --> <category --> grades>
+
+		Map<String, Map<Long, Integer>> dataMap = new HashMap<String, Map<Long, Integer>>();
+		for (String gradeLine: rubricPeerGrades) {
+		    String[] items = gradeLine.split(":", 3);
+		    Map<Long, Integer> catMap = dataMap.get(items[2]);
+		    if (catMap == null) {
+			catMap = new HashMap<Long, Integer>();
+			dataMap.put(items[2], catMap);
+		    }
+		    catMap.put(new Long(items[0]), new Integer(items[1]));
+		}
+
+		// have user data, now update database
+
+		// evalTargets are targets that it's legal to evaluate for this page
+		// owner, or if evaluating individuals on a gorup page, all members of the group
+
+		Set<String>evalTargets = new HashSet<String>();
+
+		if (evalIndividual) {
+		    String group = getCurrentPage().getGroup();
+		    if (group != null)
+			group = "/site/" + getCurrentSiteId() + "/group/" + group;
+		    try {
+			AuthzGroup g = authzGroupService.getAuthzGroup(group);
+			Set<Member> members = g.getMembers();
+			for (Member m: members) {
+			    evalTargets.add(m.getUserId());
 			}
+		    } catch (Exception e) {
+			System.out.println("unable to get members of group " + group);
+		    }
+		} else {
+		    evalTargets.add(getCurrentPage().getOwner());
+		}
+
+		// now do the actual data update. loop over users
+
+		// search will always include target. where a group is being
+		// evaluted also need groupId. In that case old format entries are
+		// by page owner, new are by group, so we need both
+		String groupId = null;
+		if (item.isGroupOwned() && !evalIndividual)
+		    groupId = getCurrentPage().getGroup();
+
+		for (String target: dataMap.keySet()) {
+		    // is this someone we can evaluate? In normal case only page owner
+
+		    // keep this in sync with the same expression in ShowPageProducer
+		    boolean canSubmit = (!item.isGroupOwned() && (!owner.equals(currentUser) || gradingSelf) ||
+					 i.isGroupOwned() && !evalIndividual && (!groupMembers.contains(currentUser) || gradingSelf) ||
+					 evalIndividual && groupMembers.contains(currentUser) && (gradingSelf || !target.equals(currentUser)));
+		    if (!canSubmit)
+			continue;
+		    if (!evalTargets.contains(target))
+			continue;
+		    // get old evaluations, as we need to mark them deleted
+		    List<SimplePagePeerEvalResult> oldEvaluations = simplePageToolDao.findPeerEvalResult(getCurrentPage().getPageId(), userId, target, groupId);
+		    Map <Long, Integer> rows = dataMap.get(target);  // rows of new data
+		    for (SimplePagePeerEvalResult result: oldEvaluations) {
+			Long rowId = result.getRowId();
+			if (rowId == 0L)
+			    rowId = rowMap.get(result.getRowText());
+			if (rowId == null || rows.get(rowId) != null) { // old value is bogus or we have a new value for this row
+			    result.setSelected(false);  // invalidate old result
+			    update(result,false);
+			}			    
+		    }
+		    // now add new evaluations
+		    for (Long rowId: rows.keySet()) {
+			int grade = rows.get(rowId); // grade for this row from data
+			// create a new format entry. use group id when evaluating group, and rowId rather than text
+			SimplePagePeerEvalResult ret = simplePageToolDao.makePeerEvalResult(getCurrentPage().getPageId(), (groupId == null ? target: null), groupId, userId,  null, rowId, grade);
+			saveItem(ret,false);		
+		    }
+		    
+		}
 		return "success";
+
 	}
 	
+	public List<String>studentPageGroupMembers(SimplePageItem item, String group) {
+	    List<String>groupMembers = new ArrayList<String>();
+	    if (item.isGroupOwned()) {
+		if (group == null) {
+		    SimplePage page = getCurrentPage();
+		    group = page.getGroup();
+		}
+		if (group != null)
+		    group = "/site/" + getCurrentSiteId() + "/group/" + group;
+		try {
+		    AuthzGroup g = authzGroupService.getAuthzGroup(group);
+		    Set<Member> members = g.getMembers();
+		    for (Member m: members) {
+			groupMembers.add(m.getUserId());
+		    }
+		} catch (Exception e) {
+		    System.out.println("unable to get members of group " + group);
+		}
+	    }
+	    return groupMembers;
+	}	    
+
+
 	// May add or edit comments
+        // can't find a call to this. Security cheking is probaby wrong.
 		public String addComment1() {
 			boolean html = false;
 			

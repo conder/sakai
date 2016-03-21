@@ -24,6 +24,7 @@ package org.sakaiproject.service.gradebook.shared;
 import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.Set;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -94,7 +95,8 @@ public interface GradebookService {
      * Comparator to ensure correct ordering of letter grades, catering for + and - in the grade
      */
     public static Comparator<String> lettergradeComparator = new Comparator<String>() {
-		public int compare(String o1, String o2){
+		@Override
+    	public int compare(String o1, String o2){
 			if(o1.toLowerCase().charAt(0) == o2.toLowerCase().charAt(0)) {
 				if(o1.length() == 2 && o2.length() == 2) {
 					if(o1.charAt(1) == '+') {
@@ -269,8 +271,12 @@ public interface GradebookService {
 	 * to specific students or instructors (such as scores) are not.
 	 * @param gradebookUid
 	 * @return a versioned XML string
+	 * 
+	 * @deprecated This is used by the old gradebook1 entityproducer and will soon be redundant
 	 */
+	@Deprecated
 	public String getGradebookDefinitionXml(String gradebookUid);
+	
 	
 	/**
 	 * Attempt to transfer gradebook data with Category and weight and settings
@@ -278,8 +284,20 @@ public interface GradebookService {
 	 * @param fromGradebookUid
 	 * @param toGradebookUid
 	 * @param fromGradebookXml
+	 * 
+	 * @deprecated This is used by the old gradebook1 entityproducer and will soon be redundant
 	 */
+	@Deprecated
 	public void transferGradebookDefinitionXml(String fromGradebookUid, String toGradebookUid, String fromGradebookXml);
+	
+	/**
+	 * Transfer the gradebook information and assignments from one gradebook to another
+	 * 
+	 * @param gradebookInformation GradebookInformation to copy
+	 * @param assignments list of Assignments to copy
+	 * @param toGradebookUid target gradebook uid
+	 */
+	public void transferGradebook(final GradebookInformation gradebookInformation, final List<Assignment> assignments, final String toGradebookUid);
 	
 	/**
 	 * 
@@ -335,6 +353,7 @@ public interface GradebookService {
      * 
      * @deprecated 
      */
+    @Deprecated
     public List getCategories(final Long gradebookId);
     
     /**
@@ -365,14 +384,14 @@ public interface GradebookService {
 	public Long addAssignment(String gradebookUid, Assignment assignmentDefinition);
 	
 	/**
-	 * Modify the definition of an existing Gradebook-managed assignment.
+	 * Modify the definition of an existing Gradebook item.
 	 * 
 	 * Clients should be aware that it's allowed to change the points value of an
 	 * assignment even if students have already been scored on it. Any existing
 	 * scores will not be adjusted.
 	 * 
-	 * This method cannot be used to modify the definitions of externally-managed
-	 * assessments or to make Gradebook-managed assignments externally managed. 
+	 * This method can be used to manage both internal and external gradebook items,
+	 * however the title, due date and total points will not be edited for external gradebook items.
 	 * 
 	 * @param assignmentId the id of the assignment that needs to be changed
 	 * @param assignmentDefinition the new properties of the assignment
@@ -393,6 +412,21 @@ public interface GradebookService {
 	 */
 	public List<Assignment> getViewableAssignmentsForCurrentUser(String gradebookUid);
 	
+	/**
+	 *
+	 * @param gradebookUid
+	 * @return list of gb items that the current user is authorized to view
+	 * sorted by the provided SortType.
+	 * If user has gradeAll permission, returns all gb items.
+	 * If user has gradeSection perm with no grader permissions,
+	 * returns all gb items.
+	 * If user has gradeSection with grader perms, returns only the items that
+	 * the current user is authorized to view or grade.
+	 * If user does not have grading privileges but does have viewOwnGrades perm,
+	 * will return all released gb items.
+	 */
+	public List<Assignment> getViewableAssignmentsForCurrentUser(String gradebookUid, SortType sortBy);
+
 	/**
 	 * 
 	 * @param gradebookUid
@@ -738,35 +772,48 @@ public interface GradebookService {
 	public List getGradingEvents(final String studentId, final long assignmentId);
     
     /**
-     * Calculate a student's score for a category given the category definition and grades for that student.
+     * Calculate the category score for the given gradebook, student and category, looking up the grades.
+     * Safe to call in context of a student.
      * 
-     * Note that this cannot be run as a student due to permission checks. 
-     * Use {@link GradebookService#calculateCategoryScore(List, String)} if in context of a student.
-     * 
-     * @param category category to perform the calculations for
-     * @param gradeMap map of assignmentId to grade, to use for the calculations
+     * @param gradebookId Id of the gradebook
+     * @param studentUuid uuid of the student
+     * @param categoryId id of category
      * @return percentage or null if no calculations were made
-     */
-    Double calculateCategoryScore(CategoryDefinition category, Map<Long,String> gradeMap);
-    
-    /**
-     * Calculate the category score given the viewable assignments and grades for that student.
      * 
-     * @param categoryId id of category, used for validation that the assignments and grades match
+     */
+	Double calculateCategoryScore(Long gradebookId, String studentUuid, Long categoryId);
+	
+	/**
+     * Calculate the category score for the given gradebook, category, viewable assignment list and grade map.
+     * This doesn't do any additional grade lookups.
+     * Safe to call in context of a student.
+     * 
+     * @param gradebook the gradebook. As this method is called for every student at once, this is passed in to save additional lookups by id.
+     * @param studentUuid uuid of the student
+     * @param categoryId id of category
      * @param assignments list of assignments the student can view
      * @param gradeMap map of assignmentId to grade, to use for the calculations
      * @return percentage or null if no calculations were made
      */
-    Double calculateCategoryScore(final Long categoryId, final List<Assignment> viewableAssignments, final Map<Long,String> gradeMap);
+	Double calculateCategoryScore(Object gradebook, String studentUuid, CategoryDefinition category, final List<Assignment> viewableAssignments, Map<Long,String> gradeMap);
 
     /**
      * Get the course grade for a student
      * 
      * @param gradebookUid
      * @param userUuid uuid of the user
-     * @return The CourseGrade for the student
+     * @return The {@link CourseGrade} for the student
      */
 	CourseGrade getCourseGradeForStudent(String gradebookUid, String userUuid);
+	
+	 /**
+     * Get the course grade for a list of students
+     * 
+     * @param gradebookUid
+     * @param userUuids uuids of the users
+     * @return a Map of {@link CourseGrade} for the students. Key is the student uuid.
+     */
+	Map<String,CourseGrade> getCourseGradeForStudents(String gradebookUid, List<String> userUuids);
 	
 	/**
 	 * Get a list of CourseSections that the current user has access to in the given gradebook.
@@ -799,4 +846,21 @@ public interface GradebookService {
 	 * @return Set of GradeMappings for the gradebook
 	 */
 	Set getGradebookGradeMappings(String gradebookUid);
+	
+	/**
+	 * Allows an instructor to set a course grade override for the given student
+	 * @param gradebookUid 	uuid of the gradebook
+	 * @param studentUuid	uuid of the student
+	 * @param grade			the new course grade
+	 */
+	void updateCourseGradeForStudent(String gradebookUid, String studentUuid, String grade);
+
+	/**
+	 * Updates the categorized order of an assignment
+	 * @param gradebookUid 	uuid of the gradebook
+	 * @param categoryId	id of the category
+	 * @param assignmentId	id of the assignment
+	 * @param order	new position of the assignment
+	 */
+	void updateAssignmentCategorizedOrder(final String gradebookUid, final Long categoryId, final Long assignmentId, Integer order);
 }

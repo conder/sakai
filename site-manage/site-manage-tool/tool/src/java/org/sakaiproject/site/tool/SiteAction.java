@@ -46,6 +46,7 @@ import java.util.ListIterator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.Vector;
@@ -414,7 +415,8 @@ public class SiteAction extends PagedResourceActionII {
 	private static final String STATE_NEW_SITE_STATUS_ISPUBLISHED = "newSiteStatusIsPublished";
 	private static final String STATE_NEW_SITE_STATUS_TITLE = "newSiteStatusTitle";
 	private static final String STATE_NEW_SITE_STATUS_ID = "newSiteStatusID";
-	
+	private static final String STATE_DUPE_SITE_STATUS_ID = "dupeSiteStatusID";
+	private static final String STATE_DUPE_SITE_URL = "dupeSiteUrl";
 
 	// %%% get rid of the IdAndText tool lists and just use ToolConfiguration or
 	// ToolRegistration lists
@@ -735,8 +737,8 @@ public class SiteAction extends PagedResourceActionII {
 	private final static String WEB_CONTENT_TOOL_SOURCE_CONFIG_VALUE = "http://";
 
 	/** the news tool **/
-	private final static String NEWS_TOOL_ID = "sakai.news";
-	private final static String NEWS_TOOL_CHANNEL_CONFIG = "channel-url";
+	private final static String NEWS_TOOL_ID = "sakai.simple.rss";
+	private final static String NEWS_TOOL_CHANNEL_CONFIG = "javax.portlet-feed_url";
 	private final static String NEWS_TOOL_CHANNEL_CONFIG_VALUE = "http://sakaiproject.org/feed";
 	
    	private final static String LESSONS_TOOL_ID = "sakai.lessonbuildertool";
@@ -1288,6 +1290,11 @@ public class SiteAction extends PagedResourceActionII {
 		String template = null;
 		context.put("action", CONTEXT_ACTION);
 
+		ToolSession session = SessionManager.getCurrentToolSession();
+		if(session.getAttribute(ATTR_TOP_REFRESH) != null && session.getAttribute(ATTR_TOP_REFRESH).equals(Boolean.TRUE)) {
+			session.removeAttribute(ATTR_TOP_REFRESH);
+			return "sitesetup/chef_refresh";
+		}
 		// updatePortlet(state, portlet, data);
 		if (state.getAttribute(STATE_INITIALIZED) == null) {
 			init(portlet, data, state);
@@ -1667,8 +1674,24 @@ public class SiteAction extends PagedResourceActionII {
 			
 			context.put("allowAddSite",allowAddSite);
 
-			//SAK-23468 put create variables into context
-			addSiteCreationValuesIntoContext(context,state);
+			//Add flash notification when new site is created
+			if(state.getAttribute(STATE_NEW_SITE_STATUS_ID) != null){
+				String  flashNotifMsg = "<a title=\"" + state.getAttribute(STATE_NEW_SITE_STATUS_TITLE) + "\"href=\"/portal/site/"+
+				state.getAttribute(STATE_NEW_SITE_STATUS_ID) + "\" target=\"_top\">"+
+				state.getAttribute(STATE_NEW_SITE_STATUS_TITLE)+"</a>" +" "+
+				rb.getString("sitdup.hasbeedup");
+				addFlashNotif(state,flashNotifMsg);
+				StringBuilder sbFlashNotifAction =  new StringBuilder();
+				if (state.getAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED).equals(Boolean.FALSE)) {
+					sbFlashNotifAction = new StringBuilder();
+					sbFlashNotifAction.append("<div id=\"newSiteAlertActions\" class=\"newSiteAlertActions\">");
+					sbFlashNotifAction.append("<a href=\"#\" id=\"newSiteAlertPublish\" class=\""+state.getAttribute(STATE_NEW_SITE_STATUS_ID)+"\""+">" + rb.getString("sitetype.publishSite") + "</a>");
+					sbFlashNotifAction.append("<span id=\"newSiteAlertPublishMess\" class=\"messageSuccess\" style=\"display:none\">" + rb.getString("list.publi") + "</span>");
+					sbFlashNotifAction.append("</div>");
+					addFlashNotif(state, sbFlashNotifAction.toString());
+				}
+				clearNewSiteStateParameters(state);
+			}
 
 			
 			return (String) getContext(data).get("template") + TEMPLATE[0];
@@ -1684,7 +1707,7 @@ public class SiteAction extends PagedResourceActionII {
 				types.addAll(mTypes);
 			}
 			context.put("siteTypes", types);
-			context.put("templateControls", ServerConfigurationService.getString("templateControls", ""));
+			context.put("templateControls", ServerConfigurationService.getString("site.setup.templateControls",ServerConfigurationService.getString("templateControls", "")));
 			// put selected/default site type into context
 			String typeSelected = (String) state.getAttribute(STATE_TYPE_SELECTED);
 			context.put("typeSelected", state.getAttribute(STATE_TYPE_SELECTED) != null?state.getAttribute(STATE_TYPE_SELECTED):types.get(0));
@@ -1959,6 +1982,12 @@ public class SiteAction extends PagedResourceActionII {
 						}
 					}
 				}
+				if (state.getAttribute(SITE_DUPLICATED) != null) {
+						String flashNotifMsg = "<a title=\""+state.getAttribute(SITE_DUPLICATED_NAME) +"\" href=\""+state.getAttribute(STATE_DUPE_SITE_URL)+"\" target=\"_top\">"+state.getAttribute(SITE_DUPLICATED_NAME)+"</a>";
+						addFlashNotif(state, rb.getString("sitdup.dupsit") + " " + flashNotifMsg + " " + rb.getString("sitdup.hasbeedup"));
+					}
+				state.removeAttribute(SITE_DUPLICATED);
+				state.removeAttribute(SITE_DUPLICATED_NAME);
 				
 				context.put("siteFriendlyUrls", getSiteUrlsForSite(site));
 				context.put("siteDefaultUrl", getDefaultSiteUrl(siteId));
@@ -4174,20 +4203,6 @@ public class SiteAction extends PagedResourceActionII {
 		context.put(STATE_MULTIPLE_TOOL_CONFIGURATION, state.getAttribute(STATE_MULTIPLE_TOOL_CONFIGURATION));
 		context.put(STATE_MULTIPLE_TOOL_INSTANCE_SELECTED, state.getAttribute(STATE_MULTIPLE_TOOL_INSTANCE_SELECTED));
 	}
-
-
-	// SAK-23468 If this is after an add site, the 
-	private void addSiteCreationValuesIntoContext(Context context, SessionState state) {
-		String siteID = (String) state.getAttribute(STATE_NEW_SITE_STATUS_ID);
-		if (siteID != null) {  // make sure this message is only seen immediately after a new site is created.
-			context.put(STATE_NEW_SITE_STATUS_ISPUBLISHED, state.getAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED));
-			String siteTitle = (String) state.getAttribute(STATE_NEW_SITE_STATUS_TITLE);
-			context.put(STATE_NEW_SITE_STATUS_TITLE, siteTitle);
-			context.put(STATE_NEW_SITE_STATUS_ID, siteID);
-			// remove the values from state so the values are gone on the next call to chef_site-list
-			//clearNewSiteStateParameters(state);
-		}
-	}	
 	
 	
 	// SAK-23468 
@@ -4204,7 +4219,7 @@ public class SiteAction extends PagedResourceActionII {
 		state.removeAttribute(STATE_NEW_SITE_STATUS_ISPUBLISHED);
 		state.removeAttribute(STATE_NEW_SITE_STATUS_ID);
 		state.removeAttribute(STATE_NEW_SITE_STATUS_TITLE);
-
+		state.removeAttribute(STATE_DUPE_SITE_URL);
 	}
 	
 	/**
@@ -4217,6 +4232,9 @@ public class SiteAction extends PagedResourceActionII {
 		// 1. the skin list
 		// For course site, display skin list based on "disable.course.site.skin.selection" value set with sakai.properties file. The setting defaults to be false.
 		boolean disableCourseSkinChoice = ServerConfigurationService.getString("disable.course.site.skin.selection", "false").equals("true");
+		//Do we allow them to use a specific icon for the site. Related to SAK-29458 for Sakai 11
+		//Default to true for now. Requires the portal.siteicon.allow value in the sakai.properties file.
+		context.put("allowSiteIcon",ServerConfigurationService.getBoolean("portal.siteicon.allow",true));
 		// For non-course site, display skin list based on "disable.noncourse.site.skin.selection" value set with sakai.properties file. The setting defaults to be true.
 		boolean disableNonCourseSkinChoice = ServerConfigurationService.getString("disable.noncourse.site.skin.selection", "true").equals("true");
 		if ((isCourseSite && !disableCourseSkinChoice) || (!isCourseSite && !disableNonCourseSkinChoice))
@@ -6384,25 +6402,29 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 		List ltiSelectedTools = selectedLTITools(site);
 		List ltiTools = new ArrayList();
 		List<Map<String, Object>> allTools;
+		String siteId = "";
 		if ( site == null )
 			allTools = m_ltiService.getTools(null,null,0,0);
 		else
-			allTools = m_ltiService.getToolsDao(null,null,0,0,site.getId());
-      
+		{
+			siteId = Objects.toString(site.getId(), "");
+			allTools = m_ltiService.getToolsDao(null,null,0,0,siteId);
+		}
 		if (allTools != null && !allTools.isEmpty()) {
 			for (Map<String, Object> tool : allTools) {
 				Set keySet = tool.keySet();
 				String toolIdString = ObjectUtils.toString(tool.get(m_ltiService.LTI_ID));
 				boolean toolStealthed = "1".equals(ObjectUtils.toString(tool.get(m_ltiService.LTI_VISIBLE)));
 				boolean ltiToolSelected = ltiSelectedTools.contains(toolIdString); 
-
+				String siteRestriction = Objects.toString(tool.get(LTIService.LTI_SITE_ID), "");
+				boolean allowedForSite = siteRestriction.isEmpty() || siteRestriction.equals(siteId);
 				try
 				{
 					// in Oracle, the lti tool id is returned as BigDecimal, which cannot be casted into Integer directly
 					Integer ltiId = Integer.valueOf(toolIdString);
 					if (ltiId != null) {
 						String ltiToolId = ltiId.toString(); 
-						if (ltiToolId != null && (!toolStealthed || ltiToolSelected) ) {
+						if (ltiToolId != null && ((!toolStealthed && allowedForSite) || ltiToolSelected) ) {
 							String relativeWebPath = null;
 							MyTool newTool = new MyTool();
 							newTool.title = tool.get("title").toString();
@@ -8617,6 +8639,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 	 * 
 	 */
 	public void doUpdate_participant(RunData data) {
+		if (!"POST".equals(data.getRequest().getMethod())) {
+			M_log.warn("Ignoring non-POST request to update site access.");
+			return;
+		}
 		SessionState state = ((JetspeedRunData) data)
 				.getPortletSessionState(((JetspeedRunData) data).getJs_peid());
 		ParameterParser params = data.getParameters();
@@ -9633,7 +9659,8 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 								
 								// save again
 								SiteService.save(site);
-								
+								state.setAttribute(STATE_DUPE_SITE_STATUS_ID, site.getId());
+								state.setAttribute(STATE_DUPE_SITE_URL, site.getUrl());
 								String realm = SiteService.siteReference(site.getId());
 								try 
 								{
@@ -9690,10 +9717,6 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 				}
 
 				if (state.getAttribute(STATE_MESSAGE) == null) {
-					// site duplication confirmed
-					state.removeAttribute(SITE_DUPLICATED);
-					state.removeAttribute(SITE_DUPLICATED_NAME);
-
 					// return to the list view
 					state.setAttribute(STATE_TEMPLATE_INDEX, "12");
 				}
@@ -11804,6 +11827,10 @@ private Map<String,List> getTools(SessionState state, String type, Site site) {
 					site = addToolToSiteIfMissing(site, missingToolId);
 					commitSite(site);
 				}
+				
+				//now update toolIds to match importTools so that the content is imported
+				toolIds.clear();
+				toolIds.addAll(importTools.keySet());
 			}
 			
 			Map transversalMap = new HashMap();
