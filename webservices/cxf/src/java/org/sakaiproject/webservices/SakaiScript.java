@@ -602,6 +602,41 @@ public class SakaiScript extends AbstractWebService {
 
         }
     }
+    
+       /**
+        * Modify PROVIDER information on authzgroup.
+        *
+        * @param sessionid the id of a valid session
+        * @param authzgroupid the id of the authzgroup
+        * @param providerid the provider id for the group
+        * @return "success" if successful/exception
+        *
+        */
+    @WebMethod
+    @Path("/setProviderIdOnAuthzGroup")
+    @Produces("text/plain")
+    @GET
+    public boolean setProviderIdOnAuthzGroup(
+               @WebParam(name = "sessionid", partName = "sessionid") @QueryParam("sessionid") String sessionid,
+               @WebParam(name = "authzgroupid", partName = "authzgroupid") @QueryParam("authzgroupid") String authzgroupid,
+               @WebParam(name = "providerid", partName = "providerid") @QueryParam("providerid") String providerid
+    )
+    {
+        Session session = establishSession(sessionid);
+
+        try
+        {
+            AuthzGroup authzgroup = authzGroupService.getAuthzGroup(authzgroupid);
+            authzgroup.setProviderGroupId(providerid);
+            authzGroupService.save(authzgroup);
+        }
+        catch (Exception e)
+        {
+            LOG.error("WS removeAuthzGroup(): " + e.getClass().getName() + " : " + e.getMessage());
+            return false;
+        }
+        return true;
+    }    
 
     /**
      * Add member to specified worksite group
