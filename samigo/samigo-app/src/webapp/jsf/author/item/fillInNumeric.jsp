@@ -77,6 +77,36 @@
  <br/>  <h:message for="answerptr" styleClass="validate"/>
  </div>
 <br/>
+ <%-- 1.2 MIN POINTS --%>
+ <f:subview id="minPoints" rendered="#{itemauthor.allowMinScore}">
+ <f:verbatim>
+ <div class="shorttext">
+ </f:verbatim>
+ <h:outputLabel value="#{authorMessages.answer_min_point_value}" />
+   <h:inputText id="answerminptr" value="#{itemauthor.currentItem.itemMinScore}" onchange="toPoint(this.id);">
+     <f:validateDoubleRange />
+   </h:inputText>
+ <f:verbatim><div></f:verbatim>
+ <h:outputText value="#{authorMessages.answer_min_point_info}" style="font-size: x-small" />
+ <f:verbatim></div></f:verbatim>
+  <br/>  <h:message for="answerminptr" styleClass="validate"/>
+ <f:verbatim>
+   </div>
+ <br/>
+ </f:verbatim>
+ </f:subview>
+
+
+<div class="longtext">
+     <h:outputLabel value="#{authorMessages.answer_point_value_display}" />    </div>
+ 	<div class="tier3">
+     <h:selectOneRadio value="#{itemauthor.currentItem.itemScoreDisplayFlag}" >
+      <f:selectItem itemValue="true"
+        itemLabel="#{authorMessages.yes}" />
+      <f:selectItem itemValue="false"
+        itemLabel="#{authorMessages.no}" />
+     </h:selectOneRadio>
+   </div>
 <%-- 2 QUESTION TEXT --%>
   <div class="longtext"> <h:outputLabel value="#{authorMessages.q_text}" />
   <br/></div>
@@ -141,11 +171,11 @@
   <h:panelGrid>
    <h:outputText value="#{authorMessages.correct_answer_opti}" />
    <samigo:wysiwyg rows="140" value="#{itemauthor.currentItem.corrFeedback}" hasToggle="yes" mode="author">
-     <f:validateLength maximum="4000"/>
+     <f:validateLength maximum="60000"/>
    </samigo:wysiwyg>
    <h:outputText value="#{authorMessages.incorrect_answer_op}" />
    <samigo:wysiwyg rows="140" value="#{itemauthor.currentItem.incorrFeedback}" hasToggle="yes" mode="author">
-     <f:validateLength maximum="4000"/>
+     <f:validateLength maximum="60000"/>
    </samigo:wysiwyg>
   </h:panelGrid>
  <f:verbatim> </div></div></f:verbatim>

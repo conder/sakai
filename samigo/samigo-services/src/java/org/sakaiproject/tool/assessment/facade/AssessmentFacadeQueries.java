@@ -77,6 +77,7 @@ import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentAttachment
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentBaseIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.AssessmentMetaDataIfc;
+import org.sakaiproject.tool.assessment.data.ifc.assessment.AttachmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.EvaluationModelIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.ItemAttachmentIfc;
 import org.sakaiproject.tool.assessment.data.ifc.assessment.ItemDataIfc;
@@ -156,7 +157,7 @@ public class AssessmentFacadeQueries extends HibernateDaoSupport implements
 				Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0),
 				Integer.valueOf(0), Integer.valueOf(0), Integer.valueOf(0), new Date(),
 				new Date(), new Date(), new Date(), new Date(), Integer.valueOf(1),
-				Integer.valueOf(1), Integer.valueOf(1), "Thanks for submitting",
+				Integer.valueOf(1), Integer.valueOf(1), Integer.valueOf(1), "Thanks for submitting",
 				"anonymous");
 		s.setAssessmentBase(assessmentTemplate);
 		assessmentTemplate
@@ -208,7 +209,7 @@ public class AssessmentFacadeQueries extends HibernateDaoSupport implements
 				Integer.valueOf(1), Integer.valueOf(1), Integer.valueOf(1), Integer.valueOf(1),
 				Integer.valueOf(1), Integer.valueOf(1), Integer.valueOf(1), new Date(),
 				new Date(), new Date(), new Date(), new Date(), Integer.valueOf(1),
-				Integer.valueOf(1), Integer.valueOf(1), "Thanks for submitting",
+				Integer.valueOf(1), Integer.valueOf(1), Integer.valueOf(1), "Thanks for submitting",
 				"anonymous");
 
 		s.setAssessmentBase(assessment);
@@ -1812,8 +1813,8 @@ public class AssessmentFacadeQueries extends HibernateDaoSupport implements
 		return attach;
 	}
 
-	public void saveOrUpdateAttachments(List<AssessmentAttachmentIfc> list) {
-	    for (AssessmentAttachmentIfc attachment : list) {
+	public void saveOrUpdateAttachments(List<AttachmentIfc> list) {
+	    for (AttachmentIfc attachment : list) {
 	        getHibernateTemplate().saveOrUpdate(attachment);
 	    }
 	}
@@ -2114,7 +2115,7 @@ public class AssessmentFacadeQueries extends HibernateDaoSupport implements
 						.getStartDate(), a.getDueDate(), a.getScoreDate(), a
 						.getFeedbackDate(), a.getRetractDate(), a
 						.getAutoSubmit(), a.getItemNavigation(), a
-						.getItemNumbering(), a.getSubmissionMessage(), a
+						.getItemNumbering(), a.getDisplayScoreDuringAssessments(), a.getSubmissionMessage(), a
 						.getReleaseTo());
 		newAccessControl.setUsername(a.getUsername());
 		newAccessControl.setPassword(a.getPassword());
@@ -2224,7 +2225,7 @@ public class AssessmentFacadeQueries extends HibernateDaoSupport implements
 			ItemData newItem = new ItemData(newSection, item.getSequence(),
 					item.getDuration(), item.getInstruction(), item
 							.getDescription(), item.getTypeId(), item
-							.getGrade(), item.getScore(), item.getDiscount(), item.getHint(), item
+							.getGrade(), item.getScore(), item.getScoreDisplayFlag(), item.getDiscount(), item.getMinScore(), item.getHint(), item
 							.getHasRationale(), item.getStatus(), item
 							.getCreatedBy(), item.getCreatedDate(), item
 							.getLastModifiedBy(), item.getLastModifiedDate(),

@@ -30,14 +30,9 @@ function extendedTimeCombine() {
 	for (var itemNum = 1; itemNum <= MAXITEMS; itemNum++) { 
 		var target = document.getElementById("xt_id"+itemNum).value;
 		if(target != "1"){ // don't add empties
-			var minutes = (parseInt(document.getElementById("xt_hours"+itemNum).value) * 3600) + parseInt(document.getElementById("xt_minutes"+itemNum).value) * 60;
-			
-			var formattedStartDate = moment($("#xt_open"+itemNum).datetimepicker('getDate')).format('MM/DD/YYYY HH:mm:ss');			
-			var formattedDueDate = moment($("#xt_due"+itemNum).datetimepicker('getDate')).format('MM/DD/YYYY HH:mm:ss');
-			var formattedRetractDate = moment($("#xt_retract"+itemNum).datetimepicker('getDate')).format('MM/DD/YYYY HH:mm:ss');
-		
+			var minutes = (parseInt(document.getElementById("xt_hours"+itemNum).value) * 3600) + parseInt(document.getElementById("xt_minutes"+itemNum).value) * 60;		
 			var code = target+"|" + minutes +"|"
-			+ formattedStartDate+"|" + formattedDueDate+"|" + formattedRetractDate + "^";
+			+ document.getElementById("xt_open"+itemNum).value+"|" + document.getElementById("xt_due"+itemNum).value+"|" + document.getElementById("xt_retract"+itemNum).value + "^";
 			document.getElementById("assessmentSettingsAction\:xt1").value = document.getElementById("assessmentSettingsAction\:xt1").value.concat(code);
 		} // end if(target != "0")
 	} //end for
@@ -61,7 +56,8 @@ function initializeExtTimeValues(fullExtendedTimeString,itemNum) {
 	document.getElementById("xt_open"+itemNum).value = evaluateDate(fullExtendedTimeString[2]);
 	document.getElementById("xt_due"+itemNum).value = evaluateDate(fullExtendedTimeString[3]);
 	document.getElementById("xt_retract"+itemNum).value = evaluateDate(fullExtendedTimeString[4]);
-	hookScripts(itemNum);
+	
+	addExtDatePickers(itemNum);
 }
 
 // Avoid undefined date values
@@ -146,7 +142,7 @@ function showExtendedTime() {
 function addExtTimeEntry() {
 	activeExtTimeEntries++;
 	document.getElementById("xt"+activeExtTimeEntries).style.display = "block";
-	hookScripts(activeExtTimeEntries);
+	addExtDatePickers(activeExtTimeEntries);
 	if(activeExtTimeEntries == MAXITEMS) { // prevents them from adding more than max
 		document.getElementById("addExtTimeControl").style.display = "none";
 	}
@@ -180,21 +176,31 @@ function deleteAllExtTimeEntries() {
 
 // Add scripts to DOM by creating a script tag dynamically.
 // @param {String=} itemNum itemNum
-function hookScripts(itemNum) {
+function addExtDatePickers(itemNum) {
 	
 	var s = document.createElement("script");
 	s.type = "text/javascript";	
 	
-	var defaultStartDate = moment(document.getElementById("xt_open"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	var defaultStartDate;
+	if(document.getElementById("xt_open"+itemNum).value == ''){		
+		defaultStartDate = moment($('#assessmentSettingsAction\\:startDate').datetimepicker('getDate')).format('YYYY-MM-DD HH:mm:ss');
+	} else {
+		defaultStartDate = moment(document.getElementById("xt_open"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	}
 	var startDatePickerOptions = { input: '#xt_open' + itemNum , 
 		useTime: 1,
 		parseFormat: 'YYYY-MM-DD HH:mm:ss', 
 		val: defaultStartDate,
 		ashidden: { iso8601: 'xt_open' + itemNum + 'ISO8601' } 
 	}
-	localDatePicker(startDatePickerOptions); 
+	localDatePicker(startDatePickerOptions);
 	
-	var formattedDueDate = moment(document.getElementById("xt_due"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	var formattedDueDate;
+	if(document.getElementById("xt_due"+itemNum).value == ''){		
+		formattedDueDate = moment($('#assessmentSettingsAction\\:endDate').datetimepicker('getDate')).format('YYYY-MM-DD HH:mm:ss');
+	} else {
+		formattedDueDate = moment(document.getElementById("xt_due"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	}
 	var dueDatePickerOptions = { input: '#xt_due' + itemNum , 
 		useTime: 1,
 		parseFormat: 'YYYY-MM-DD HH:mm:ss', 
@@ -203,15 +209,19 @@ function hookScripts(itemNum) {
 	}
 	localDatePicker(dueDatePickerOptions); 
 	
-	var formattedRetractDate = moment(document.getElementById("xt_retract"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	var formattedRetractDate;
+	if(document.getElementById("xt_retract"+itemNum).value == ''){		
+		formattedRetractDate = moment($('#assessmentSettingsAction\\:retractDate').datetimepicker('getDate')).format('YYYY-MM-DD HH:mm:ss');
+	} else {
+		formattedRetractDate = moment(document.getElementById("xt_retract"+itemNum).value).format('YYYY-MM-DD HH:mm:ss');
+	}
 	var retractDatePickerOptions = { input: '#xt_retract' + itemNum , 
 		useTime: 1,
 		parseFormat: 'YYYY-MM-DD HH:mm:ss', 
 		val: formattedRetractDate,
 		ashidden: { iso8601: 'xt_retract' + itemNum + 'ISO8601' } 
 	}
-	localDatePicker(retractDatePickerOptions); 
-	
+	localDatePicker(retractDatePickerOptions); 	
 	s.innerHTML = '';	
 	document.getElementsByTagName("head")[0].appendChild(s);
 }

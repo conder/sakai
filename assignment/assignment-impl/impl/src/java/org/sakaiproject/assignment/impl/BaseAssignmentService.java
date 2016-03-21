@@ -4615,29 +4615,39 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 	        Assignment a = getAssignment(aRef);
 	        if (a != null)
 	        {
-	            Site st = SiteService.getSite(contextString);
-	            if (a.getAccess().equals(Assignment.AssignmentAccess.SITE))
-	            {
-	                Collection<Group> groupRefs = st.getGroups();
-	                for (Iterator gIterator = groupRefs.iterator(); gIterator.hasNext();)
-	                {
-	                    Group _gg = (Group)gIterator.next();
-	                    //if (_gg.getProperties().get(GROUP_SECTION_PROPERTY) == null) {		// NO SECTIONS (this might not be valid test for manually created sections)
-	                    rv.add(_gg);
-	                    //}
-	                }
-	            } 
-	            else
-	            {
-	                Collection<String> groupRefs = a.getGroups();
-	                for (Iterator gIterator = groupRefs.iterator(); gIterator.hasNext();)
-	                {
-	                    Group _gg = st.getGroup((String)gIterator.next());		// NO SECTIONS (this might not be valid test for manually created sections)
-	                    if (_gg != null) {// && _gg.getProperties().get(GROUP_SECTION_PROPERTY) == null) {
+	        	Site st = SiteService.getSite(contextString);
+	        	if (allOrOneGroup.equals(AssignmentConstants.ALL))
+	        	{
+		            if (a.getAccess().equals(Assignment.AssignmentAccess.SITE))
+		            {
+		                Collection<Group> groupRefs = st.getGroups();
+		                for (Iterator gIterator = groupRefs.iterator(); gIterator.hasNext();)
+		                {
+		                    Group _gg = (Group)gIterator.next();
+		                    //if (_gg.getProperties().get(GROUP_SECTION_PROPERTY) == null) {		// NO SECTIONS (this might not be valid test for manually created sections)
+		                    rv.add(_gg);
+		                    //}
+		                }
+		            } 
+		            else
+		            {
+		                Collection<String> groupRefs = a.getGroups();
+		                for (Iterator gIterator = groupRefs.iterator(); gIterator.hasNext();)
+		                {
+		                    Group _gg = st.getGroup((String)gIterator.next());		// NO SECTIONS (this might not be valid test for manually created sections)
+		                    if (_gg != null) {
+		                        rv.add(_gg);
+		                    }
+		                }
+		            }
+	        	}
+	        	else
+	        	{
+	        		Group _gg = st.getGroup(allOrOneGroup);
+	        		 if (_gg != null) {// && _gg.getProperties().get(GROUP_SECTION_PROPERTY) == null) {
 	                        rv.add(_gg);
 	                    }
-	                }
-	            } 
+	        	}
 
 	            for (Iterator uIterator = rv.iterator(); uIterator.hasNext();)
 	            {
@@ -4660,7 +4670,8 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
                         			M_log.debug(this + " getSubmitterGroupList context " + contextString + " for assignment " + a.getId() + " for group " + g.getId());
                         			AssignmentSubmissionEdit s =
                         					addSubmission(contextString, a.getId(), g.getId());
-                        			s.setSubmitted(false);
+                        			s.setSubmitted(true);
+                        			s.setIsUserSubmission(false);
                         			s.setAssignment(a);
 
                         			// set the resubmission properties
@@ -5759,10 +5770,10 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 					return properties.getBooleanProperty(NEW_ASSIGNMENT_CHECK_ANONYMOUS_GRADING);
 			}
 			catch (EntityPropertyNotDefinedException e) {
-					M_log.warn("Entity Property " + NEW_ASSIGNMENT_CHECK_ANONYMOUS_GRADING + " not defined " + e.getMessage());
+					M_log.debug("Entity Property " + NEW_ASSIGNMENT_CHECK_ANONYMOUS_GRADING + " not defined " + e.getMessage());
 			}
 			catch (EntityPropertyTypeException e) {
-					M_log.warn("Entity Property " + NEW_ASSIGNMENT_CHECK_ANONYMOUS_GRADING + " type not defined " + e.getMessage());
+					M_log.debug("Entity Property " + NEW_ASSIGNMENT_CHECK_ANONYMOUS_GRADING + " type not defined " + e.getMessage());
 			}
 			return false;
 	}
@@ -10326,7 +10337,7 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
                         return -2;
                     }
 
-					int score = contentReviewService.getReviewScore(contentId, getAssignment().getReference(), getSubmitterId());
+					int score = contentReviewService.getReviewScore(contentId, getAssignment().getReference(), getContentReviewSubmitterId(cr));
 					m_reviewScore = score;
 					M_log.debug(this + " getReviewScore CR returned a score of: " + score);
 					return score;
@@ -10337,9 +10348,8 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 					try {
 						
 							M_log.debug(this + " getReviewScore Item is not in queue we will try add it");
-							String userId = this.getSubmitterId();
                                                         try {
-								contentReviewService.queueContent(userId, this.getContext(), getAssignment().getReference(), Arrays.asList(cr));
+								contentReviewService.queueContent(getContentReviewSubmitterId(cr), this.getContext(), getAssignment().getReference(), Arrays.asList(cr));
 							}
 							catch (QueueException qe) {
 								M_log.warn(" getReviewScore Unable to queue content with content review Service: " + qe.getMessage());
@@ -10397,7 +10407,7 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 					return -2;
 				}
 
-				int score = contentReviewService.getReviewScore(contentId, getAssignment().getReference(), getSubmitterId());
+				int score = contentReviewService.getReviewScore(contentId, getAssignment().getReference(), getContentReviewSubmitterId(cr));
 				// TODO: delete the following line if there will be no repercussions:
 				m_reviewScore = score;
 				M_log.debug(this + " getReviewScore(ContentResource) CR returned a score of: " + score);
@@ -10409,10 +10419,9 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 				try
 				{
 					M_log.debug(" getReviewScore(ContentResource) Item is not in queue we will try to add it");
-					String userId = (String)this.getSubmitterId();
 					try
 					{
-						contentReviewService.queueContent(userId, this.getContext(), getAssignment().getReference(), Arrays.asList(cr));
+						contentReviewService.queueContent(getContentReviewSubmitterId(cr), this.getContext(), getAssignment().getReference(), Arrays.asList(cr));
 					}
 					catch (QueueException qe)
 					{
@@ -10432,6 +10441,19 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 			}
 		}
 		
+		public String getContentReviewSubmitterId(ContentResource cr){
+			//Group submissions store the group ID as the submitterId, so find an actual user ID
+			String userId = null;
+			if(cr != null && getAssignment().isGroup() && cr.getProperties() != null
+					&& StringUtils.isNotEmpty(cr.getProperties().getProperty(ResourceProperties.PROP_CREATOR))){
+				//this isn't the best solution since the instructor could have submitted on behalf of the group, resulting in getting the instructors ID
+				userId = cr.getProperties().getProperty(ResourceProperties.PROP_CREATOR);
+			}else{						
+				userId = this.getSubmitterId();
+			}
+			return userId;
+		}
+
 		public String getReviewReport() {
 //			 Code to get updated report if default
 			if (m_submittedAttachments.isEmpty()) { 
@@ -10866,7 +10888,11 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 
 			addElementsToList("log",m_submissionLog,el,false);
 			addElementsToList("grade",m_grades,el,false);
-			addElementsToList("submitters",m_submitters,el,false);
+			addElementsToList("submitter",m_submitters,el,false);
+			// for backward compatibility of assignments without submitter ids
+			if (m_submitterId == null && m_submitters.size() > 0) {
+				m_submitterId = (String) m_submitters.get(0);
+			}
 			addElementsToList("feedbackattachment",m_feedbackAttachments,el,true);
 			addElementsToList("submittedattachment",m_submittedAttachments,el,true);
 
@@ -11049,6 +11075,10 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 							addElementsToList("log",m_submissionLog,attributes,false);
 							addElementsToList("grade",m_grades,attributes,false);
 							addElementsToList("submitter",m_submitters,attributes,false);
+							// for backward compatibility of assignments without submitter ids
+							if (m_submitterId == null && m_submitters.size() > 0) {
+								m_submitterId = (String) m_submitters.get(0);
+							}
 							addElementsToList("feedbackattachment",m_feedbackAttachments,attributes,true);
 							addElementsToList("submittedattachment",m_submittedAttachments,attributes,true);
 
@@ -11378,7 +11408,63 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 		        while (_it.hasNext()) {
 		            String _s = _it.next();
 		            if (_s.startsWith(id + "::")) {
-		                return _s.endsWith("null") ? null: _s.substring(_s.indexOf("::") + 2);
+		                //return _s.endsWith("null") ? null: _s.substring(_s.indexOf("::") + 2);
+		            	if(_s.endsWith("null"))
+		            	{
+		            		return null;
+		            	}
+		            	else
+		            	{
+		            		String grade=_s.substring(_s.indexOf("::") + 2);
+		            		if (grade != null && grade.length() > 0 && !"0".equals(grade))
+		    				{
+		    					int factor = getAssignment().getContent().getFactor();
+		    					int dec = (int)Math.log10(factor);
+		    					String decSeparator = FormattedText.getDecimalSeparator();
+		    					String decimalGradePoint = "";
+		    					try
+		    					{
+		    						Integer.parseInt(grade);
+		    						// if point grade, display the grade with factor decimal place
+		    						int length = grade.length();
+		    						if (length > dec) {
+		    							decimalGradePoint = grade.substring(0, grade.length() - dec) + decSeparator + grade.substring(grade.length() - dec);
+		    						}
+		    						else {
+		    							String newGrade = "0".concat(decSeparator);
+		    							for (int i = length; i < dec; i++) {
+		    								newGrade = newGrade.concat("0");
+		    							}
+		    							decimalGradePoint = newGrade.concat(grade);
+		    						}
+		    					}
+		    					catch (NumberFormatException e) {
+		    						try {
+		    							Float.parseFloat(grade);
+		    							decimalGradePoint = grade;
+		    						}
+		    						catch (Exception e1) {
+		    							return grade;
+		    						}
+		    					}
+		    					// get localized number format
+		    					NumberFormat nbFormat = FormattedText.getNumberFormat(dec,dec,false);
+		    					DecimalFormat dcformat = (DecimalFormat) nbFormat;
+		    					// show grade in localized number format
+		    					try {
+		    						Double dblGrade = dcformat.parse(decimalGradePoint).doubleValue();
+		    						decimalGradePoint = nbFormat.format(dblGrade);
+		    					}
+		    					catch (Exception e) {
+		    						return grade;
+		    					}
+		    					return decimalGradePoint;
+		    				}
+		    				else
+		    				{
+		    					return StringUtils.trimToEmpty(grade);
+		    				}
+		            	}
 		            }
 		        }
 		    }
@@ -12444,7 +12530,20 @@ public abstract class BaseAssignmentService implements AssignmentService, Entity
 				Assignment ass = this.getAssignment();			
 				if (ass != null)
 				{
-					contentReviewService.queueContent(this.getSubmitterId(), this.getContext(), ass.getReference(), resources);
+					//Group submissions store the group ID as the submitterId, so find an actual user ID
+					String userId = null;
+					if(getAssignment().isGroup()){
+						//first first user id from an attachment
+						for(ContentResource cr : resources){
+							userId = this.getContentReviewSubmitterId(cr);
+							if(userId != null){
+								break;
+							}
+						}
+					}else{						
+						userId = this.getContentReviewSubmitterId(null);
+					}
+					contentReviewService.queueContent(userId, this.getContext(), ass.getReference(), resources);
 				}
 				else
 				{

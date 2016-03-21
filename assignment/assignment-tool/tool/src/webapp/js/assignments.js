@@ -362,29 +362,37 @@ ASN.showOrHideSelectGroupsMessage = function() {
     }
     
     // Get the form submission buttons
-    var btnPost = document.getElementById("post");
-    var btnSave = document.getElementById("save");
-    var btnPreview = document.getElementById("preview");
-    var buttons = [btnPost, btnPreview];
-    if (btnSave !== null) {
-        buttons.push(btnSave);
-    }
-        
+    var postButtons = document.getElementsByName( "post" );
+    var previewButtons = document.getElementsByName( "preview" );
+    var saveButtons = document.getElementsByName( "save" );
+
     // Show/hide the groups message
     if (groupsRadio.checked && !groupsSelected) {
         groupMsg.style.display = "block";
         
         // Disable the post, save and preview buttons
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = true;
+        for (i = 0; i < postButtons.length; i++) {
+            postButtons[i].disabled = true;
+        }
+        for (i = 0; i < previewButtons.length; i++) {
+            previewButtons[i].disabled = true;
+        }
+        for (i = 0; i < saveButtons.length; i++) {
+            saveButtons[i].disabled = true;
         }
     } 
     else {
         groupMsg.style.display = "none";
         
         // Enable the post, save and preview buttons
-        for (i = 0; i < buttons.length; i++) {
-            buttons[i].disabled = false;
+        for (i = 0; i < postButtons.length; i++) {
+            postButtons[i].disabled = false;
+        }
+        for (i = 0; i < previewButtons.length; i++) {
+            previewButtons[i].disabled = false;
+        }
+        for (i = 0; i < saveButtons.length; i++) {
+            saveButtons[i].disabled = false;
         }
     }
 };
@@ -886,5 +894,49 @@ ASN.toggleAutoAnnounceOptions = function(checked){
     }else{
         section.style.display="none";
         resizeFrame('shrink');
+    }
+};
+
+// SAK-30032
+ASN.setupPeerReviewAttachment = function(){
+    $('#submissionFileCount').val(1);
+    $('#addMoreAttachmentControls').click(function(e){
+        e.preventDefault();
+        if ($('#submissionFileCount').val() < 5) {
+            var $input = $('#clonableUpload').clone().removeAttr('id').addClass('cloned').appendTo('#clonedHolder').children('input');
+            $input.val('');
+            var $count = $('#submissionFileCount').val();
+            var $nameCount = "upload"+$count;
+            $input.attr("name", $nameCount);
+            $('#submissionFileCount').val(parseInt($('#submissionFileCount').val(), 10) + 1);
+            if ($('#submissionFileCount').val() == 5) {
+                $('#addMoreAttachmentControls').hide();
+                $('#addMoreAttachmentControlsInactive').show();
+            }
+        }
+        $('.cloned a').show();
+        resizeFrame('grow');
+    });
+    var notifyDeleteControl = function(){
+        $('#submissionFileCount').val(parseInt($('#submissionFileCount').val(), 10) - 1);
+        if ($('#submissionFileCount').val() < 5) {
+            $('#addMoreAttachmentControls').show();
+            $('#addMoreAttachmentControlsInactive').hide();
+        }
+    };
+};
+
+// SAK-30032
+ASN.submitPeerReviewAttachment = function(id, action)
+{
+    var theForm = document.getElementById(id);
+    if(action !== null) {
+        theForm.action = action;
+    }
+    if(theForm && theForm.onsubmit) {
+        theForm.onsubmit();
+    }
+    if(theForm && theForm.submit) {
+        theForm.submit();
     }
 };

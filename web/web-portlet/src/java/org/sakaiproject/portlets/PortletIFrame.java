@@ -176,8 +176,6 @@ public class PortletIFrame extends GenericPortlet {
     protected static final String MACRO_USER_LAST_NAME      = "${USER_LAST_NAME}";
     /** Macro name: Role */
     protected static final String MACRO_USER_ROLE           = "${USER_ROLE}";
-    /** Macro name: Session */
-    protected static final String MACRO_SESSION_ID          = "${SESSION_ID}";
 
     private static final String MACRO_CLASS_SITE_PROP = "SITE_PROP:";
    
@@ -596,6 +594,10 @@ public class PortletIFrame extends GenericPortlet {
 					    String infoUrl = StringUtils.trimToNull(s.getInfoUrl());
 					    if (infoUrl != null)
 					    {
+                                            //Check if infoUrl is relative? and prepend the server url
+                                            if(infoUrl.startsWith("/") && !infoUrl.contains("://")){
+                                                infoUrl = ServerConfigurationService.getServerUrl() + infoUrl;
+                                            }
 						    context.put("info_url", FormattedText.escapeHtmlFormattedTextarea(infoUrl));
 					    }
 
@@ -869,9 +871,13 @@ public class PortletIFrame extends GenericPortlet {
             // Handle the infoUrl
             if (SPECIAL_WORKSITE.equals(special))
             {
-                if ((infoUrl != null) && (infoUrl.length() > 0) && (!infoUrl.startsWith("/")) && (infoUrl.indexOf("://") == -1))
-                {
-                    infoUrl = "http://" + infoUrl;
+                //Check info-url for null and empty
+                if(StringUtils.isNotBlank(infoUrl)){
+                    // If the site info url has server url then make it a relative link.
+                    String serverName = new URL(ServerConfigurationService.getServerUrl()).getHost();
+                    // if the supplied url starts with protocol//serverName:port/
+                    Pattern serverUrlPattern = Pattern.compile(String.format("^(https?:)?//%s:?\\d*/", serverName));
+                    infoUrl = serverUrlPattern.matcher(infoUrl).replaceFirst("/");
                 }
                 String description = StringUtils.trimToNull(request.getParameter("description"));
                 //Need to save this processed
@@ -1227,10 +1233,6 @@ public class PortletIFrame extends GenericPortlet {
 			if (macroName.equals(MACRO_USER_ROLE))
 			{
 				return this.getUserRole();
-			}
-			if (macroName.equals(MACRO_SESSION_ID))
-			{
-				return this.getSessionId();
 			}
 
 			if (macroName.startsWith("${"+MACRO_CLASS_SITE_PROP)) 

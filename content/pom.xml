@@ -4,14 +4,13 @@
     <parent>
       <groupId>org.sakaiproject</groupId>
       <artifactId>master</artifactId>
-      <version>11-SNAPSHOT</version>
+      <version>12-SNAPSHOT</version>
       <relativePath>../master/pom.xml</relativePath>
     </parent>
 
   <name>Sakai Content Project</name>
   <groupId>org.sakaiproject.content</groupId>
   <artifactId>content</artifactId>
-  <version>11-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <profiles>
@@ -36,6 +35,7 @@
         <activeByDefault>true</activeByDefault>
       </activation>
       <modules>
+        <module>content-cleanup</module>
         <module>content-copyright/api</module>
         <module>content-copyright/impl</module>
         <module>content-copyright/pack</module>

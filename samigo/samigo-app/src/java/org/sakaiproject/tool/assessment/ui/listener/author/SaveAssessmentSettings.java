@@ -147,6 +147,8 @@ public class SaveAssessmentSettings
     }
     if (assessmentSettings.getItemNumbering()!=null)
       control.setItemNumbering(new Integer(assessmentSettings.getItemNumbering()));
+    if(assessmentSettings.getDisplayScoreDuringAssessments() != null)
+    	control.setDisplayScoreDuringAssessments(new Integer(assessmentSettings.getDisplayScoreDuringAssessments()));
     if (assessmentSettings.getAssessmentFormat()!=null )
      control.setAssessmentFormat(new Integer(assessmentSettings.getAssessmentFormat()));
 
@@ -195,9 +197,9 @@ public class SaveAssessmentSettings
     // e. set Submission Messages
     control.setSubmissionMessage(assessmentSettings.getSubmissionMessage());
     // f. set username
-    control.setUsername(TextFormat.convertPlaintextToFormattedTextNoHighUnicode(log, assessmentSettings.getUsername()));
+    control.setUsername(TextFormat.convertPlaintextToFormattedTextNoHighUnicode(log, StringUtils.trim(assessmentSettings.getUsername())));
     // g. set password
-    control.setPassword(TextFormat.convertPlaintextToFormattedTextNoHighUnicode(log, assessmentSettings.getPassword()));
+    control.setPassword(TextFormat.convertPlaintextToFormattedTextNoHighUnicode(log, StringUtils.trim(assessmentSettings.getPassword())));
     // h. set finalPageUrl
 
     String finalPageUrl = "";
@@ -342,6 +344,8 @@ public class SaveAssessmentSettings
     
     assessment.setTitle( newTitle );
     assessment.updateAssessmentMetaData(SecureDeliveryServiceAPI.TITLE_DECORATION, titleDecoration );
+
+    assessment.setInstructorNotification(Integer.valueOf(assessmentSettings.getInstructorNotification()));
 
     // l. FINALLY: save the assessment
     assessmentService.saveAssessment(assessment);

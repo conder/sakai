@@ -106,6 +106,7 @@ import org.sakaiproject.tool.assessment.util.FormatException;
 import org.sakaiproject.util.FormattedText;
 import org.sakaiproject.util.ResourceLoader;
 
+
 /**
  * <p>Title: Samigo</p>
  * <p>Purpose:  this module creates the lists of published assessments for the select index
@@ -260,6 +261,9 @@ public class DeliveryActionListener
               }
               log.debug("GraderComments: getComments()" + agData.getComments());
               delivery.setGraderComment(agData.getComments());
+              delivery.setAssessmentGradingAttachmentList(agData.getAssessmentGradingAttachmentList());
+              delivery.setHasAssessmentGradingAttachment(
+            		  agData.getAssessmentGradingAttachmentList() != null && agData.getAssessmentGradingAttachmentList().size() > 0);
               delivery.setAssessmentGradingId(agData.getAssessmentGradingId());
               delivery.setOutcome("takeAssessment");
               delivery.setSecureDeliveryHTMLFragment( "" );
@@ -2945,9 +2949,15 @@ public class DeliveryActionListener
 	service.extractCalcQAnswersArray(answersMap, item, gradingId, agentId); // return value not used, answersMap is populated
 	
 	int answerSequence = 1; // this corresponds to the sequence value assigned in extractCalcQAnswersArray()
+	int decimalPlaces = 3;
 	while(answerSequence <= answersMap.size()) {
-			String answer = (String)answersMap.get(answerSequence);
+		  String answer = (String)answersMap.get(answerSequence);
+		  decimalPlaces = Integer.valueOf(answer.substring(answer.indexOf(',')+1, answer.length()));
 		  answer = answer.substring(0, answer.indexOf("|")); // cut off extra data e.g. "|2,3"
+		  
+		  // We need the key formatted in scientificNotation
+		  answer = service.toScientificNotation(answer, decimalPlaces);
+		  
 		  keysString = keysString.concat(answer + ",");
 		  answerSequence++;
 	  }

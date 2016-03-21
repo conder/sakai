@@ -5,10 +5,12 @@
 /**************************************************************************************
  * A GradebookGradeSummary to encapsulate all the grade summary content behaviours 
  */
-function GradebookGradeSummary($content, blockout) {
+function GradebookGradeSummary($content, blockout, modalTitle) {
   this.$content = $content;
 
   this.blockout = blockout || false;
+
+  this.modalTitle = modalTitle || false;
 
   this.studentId = this.$content.find("[data-studentid]").data("studentid");
 
@@ -29,6 +31,7 @@ function GradebookGradeSummary($content, blockout) {
 
 
 GradebookGradeSummary.prototype.setupWicketModal = function() {
+    this.updateTitle();
     this.setupTabs();
     this.setupStudentNavigation();
     this.setupFixedFooter();
@@ -37,10 +40,17 @@ GradebookGradeSummary.prototype.setupWicketModal = function() {
 };
 
 
+GradebookGradeSummary.prototype.updateTitle = function() {
+  if (this.modalTitle) {
+    this.$modal.find("h3.w_captionText").html(this.modalTitle);
+  }
+};
+
+
 GradebookGradeSummary.prototype.setupTabs = function() {
   // if blockout, then confirmation required when changing tabs
   if (this.blockout) {
-    var $otherTab = this.$content.find(".nav.nav-pills li:not(.active) a");
+    var $otherTab = this.$content.find(".nav.nav-tabs li:not(.active) a");
     var $cloneOfTab = $otherTab.clone();
 
     $otherTab.hide();
@@ -131,8 +141,10 @@ GradebookGradeSummary.prototype.setupFixedFooter = function() {
 GradebookGradeSummary.prototype.setupMask = function() {
   var $mask = this.$modal.siblings(".wicket-mask-transparent, .wicket-mask-dark");
   if (this.blockout) {
+    // Darken the mask
     $mask.removeClass("wicket-mask-transparent").addClass("wicket-mask-dark");
-    $("#container").parent().addClass("gb-blur");
+    // Add a blur effect to the main page container
+    $("#pageBody").addClass("gb-blur");
   } else {
     $mask.removeClass("wicket-mask-dark").addClass("wicket-mask-transparent");
     GradebookGradeSummaryUtils.clearBlur();

@@ -7114,7 +7114,7 @@ public class DiscussionForumTool
         while (roleIter.hasNext())
         {
           Role role = (Role) roleIter.next();
-          if (role != null) 
+          if (role != null && authzGroupService.isRoleAssignable(role.getId()))
           {
             if(i==0)
             {
@@ -9399,7 +9399,7 @@ public class DiscussionForumTool
 
 	public boolean isRanksEnabled()
 	{
-		return ServerConfigurationService.getBoolean("msgcntr.forums.ranks.enable", true);
+		return ServerConfigurationService.getBoolean("msgcntr.forums.ranks.enable", false);
 	}
 
 	private static final String INSUFFICIENT_PRIVILEGES_TO_EDIT_RANKS = "cdfm_insufficient_privileges_ranks";

@@ -232,29 +232,7 @@ ul.attachList li{
 	padding: 2px;
 }
 
-/*boxes a set of controls for navigating through a series of items - ie. emails, announcements*/
-/*see an announcement */
-.itemNav{
-	float: right;
-	vertical-align: bottom;
-	text-align: right;
-	line-height: 2em;
-	clear: both;
-	margin: .5em;
-	white-space: nowrap;
-}
 
-.itemNav a{
-	white-space: nowrap;
-}
-
-* html body .itemNav input{
-	font-size: 85%;
-}
-
-.itemNav input{
-	font-size: 90%;
-}
 /*for link controls in views */
 /*see calendar */
 .viewLinkControl
@@ -387,17 +365,6 @@ ie - site creation*/
 /*indicate failed validation, non-system errors*/
 /*TODO: consolidate - validationEmbedded used in gradebook, validation in many places, alertMessage legacy*/
 /*see: create an announcement but "forget" to give it a title*/
-.validationEmbedded,.validation,.alertMessage{
-	background: #fff url(images/warn.gif) 5px 5px no-repeat;
-	border: 1px solid #b11;
-	display: block;
-	width: 80%;
-	font-size: 1em;
-	clear: both;
-	color: #b11;
-	margin: 5px 0;
-	padding: 5px 5px 5px 25px !important;
-}
 ul.alertMessage{
    list-style-type: none;
 }
@@ -562,7 +529,6 @@ textarea{
 /*border that needs to match the background to avoid some tedious problems in IE	*/
 .checkbox{
 	margin: .2em 0;
-	border: 1px solid #fff;
 }
 
 /*certain longtext/label pairs need to display label and control on separate lines - their label is classed "block"*/
@@ -739,11 +705,6 @@ td table.checkbox {
 /*so that the same table does not inherit the padding from the parent*/
 td table.checkbox td{
 	padding: 0;
-}
-
-/*to avoid IE drawing a border around the input*/
-table.checkbox label input {
-	border: 1px solid #fff;
 }
 
 /*SECTION 11 WIDGETS*/
@@ -965,3 +926,25 @@ ul.calendarLegend li{
 .ui-timepicker-div.ui-timepicker-oneLine dl dd.ui_tpicker_microsec:before { content:'.'; display:inline-block; }
 .ui-timepicker-div.ui-timepicker-oneLine .ui_tpicker_unit_hide,
 .ui-timepicker-div.ui-timepicker-oneLine .ui_tpicker_unit_hide:before{ display: none; }
+/* css for duplicate site alert*/
+#flashNotif  a.flashNotifClose {
+    text-decoration: none;
+    font-size:120%;
+    position:absolute;
+    top:5px;
+    right:5px;
+}
+#flashNotif {
+    position:absolute;
+    top:25px;
+    left:30%;
+    right:30%;
+    padding:15px;
+    border:1px solid #ccc;
+    background: #ffe;
+    -webkit-border-radius: 3px;
+    -moz-border-radius: 3px;
+    border-radius: 3px;
+    box-shadow:2px 2px 2px #cccccc;
+    vertical-align:middle;
+}

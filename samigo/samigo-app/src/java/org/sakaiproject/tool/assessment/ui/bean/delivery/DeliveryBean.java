@@ -30,14 +30,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.ResourceBundle;
-import java.util.Set;
+import java.util.*;
 
 import javax.faces.application.FacesMessage;
 import javax.faces.context.ExternalContext;
@@ -51,6 +44,7 @@ import org.sakaiproject.component.cover.ServerConfigurationService;
 import org.sakaiproject.event.cover.EventTrackingService;
 import org.sakaiproject.event.cover.NotificationService;
 import org.sakaiproject.exception.IdUnusedException;
+import org.sakaiproject.samigo.util.SamigoConstants;
 import org.sakaiproject.site.api.Site;
 import org.sakaiproject.site.api.SitePage;
 import org.sakaiproject.site.api.ToolConfiguration;
@@ -64,6 +58,7 @@ import org.sakaiproject.tool.assessment.data.dao.assessment.PublishedItemData;
 import org.sakaiproject.tool.assessment.data.dao.assessment.PublishedItemText;
 import org.sakaiproject.tool.assessment.data.dao.assessment.PublishedSectionData;
 import org.sakaiproject.tool.assessment.data.dao.assessment.PublishedSecuredIPAddress;
+import org.sakaiproject.tool.assessment.data.dao.grading.AssessmentGradingAttachment;
 import org.sakaiproject.tool.assessment.data.dao.grading.AssessmentGradingData;
 import org.sakaiproject.tool.assessment.data.dao.grading.ItemGradingData;
 import org.sakaiproject.tool.assessment.data.dao.grading.MediaData;
@@ -100,6 +95,7 @@ import org.sakaiproject.tool.cover.ToolManager;
 import org.sakaiproject.util.ResourceLoader;
 
 import uk.org.ponder.rsf.state.support.TMLFixer;
+
 import org.apache.commons.lang.StringUtils;
 /**
  *
@@ -171,6 +167,8 @@ public class DeliveryBean
   private boolean submitted;
   private boolean graded;
   private String graderComment;
+  private List<AssessmentGradingAttachment> assessmentGradingAttachmentList;
+  private boolean hasAssessmentGradingAttachment;
   private String rawScore;
   private String grade;
   private java.util.Date submissionDate;
@@ -1245,6 +1243,23 @@ public class DeliveryBean
   {
     graderComment = newComment;
   }
+  
+  public List<AssessmentGradingAttachment> getAssessmentGradingAttachmentList() {
+	return assessmentGradingAttachmentList;
+  }
+  
+  public void setAssessmentGradingAttachmentList(
+		List<AssessmentGradingAttachment> assessmentGradingAttachmentList) {
+	this.assessmentGradingAttachmentList = assessmentGradingAttachmentList;
+  }
+  
+  public boolean isHasAssessmentGradingAttachment() {
+	return hasAssessmentGradingAttachment;
+  }
+  
+  public void setHasAssessmentGradingAttachment(boolean hasAssessmentGradingAttachment) {
+	this.hasAssessmentGradingAttachment = hasAssessmentGradingAttachment;
+  }
 
   public String getRawScore()
   {
@@ -1560,6 +1575,8 @@ public class DeliveryBean
    
   private String submitForGrade(boolean isFromTimer, boolean submitFromTimeoutPopup) {
 	try{
+	  Map<String, Object> notificationValues = new HashMap<String, Object>();
+	  Long local_assessmentGradingID = adata.getAssessmentGradingId();
 	  if (this.actionMode == PREVIEW_ASSESSMENT) {
 		  return "editAssessment";
 	  }	  
@@ -1614,28 +1631,28 @@ public class DeliveryBean
 	  }
 
 	  String returnValue="submitAssessment";
+	  PublishedAssessmentService publishedAssessmentService = new PublishedAssessmentService();
+	  String siteId = publishedAssessmentService.getPublishedAssessmentOwner(adata.getPublishedAssessmentId());
+	  String resource = "siteId=" + AgentFacade.getCurrentSiteId() + ", submissionId=" + local_assessmentGradingID;
+
 	  if (!isFromTimer) {
 		  if (this.actionMode == TAKE_ASSESSMENT_VIA_URL) // this is for accessing via published url
 		  {
 			  returnValue="anonymousThankYou";
-			  PublishedAssessmentService publishedAssessmentService = new PublishedAssessmentService();
-			  String siteId = publishedAssessmentService.getPublishedAssessmentOwner(adata.getPublishedAssessmentId());
-			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.submit.via_url", "siteId=" + AgentFacade.getCurrentSiteId() + ", submissionId=" + adata.getAssessmentGradingId(), siteId, true, NotificationService.NOTI_REQUIRED)); 
+			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.submit.via_url", resource, siteId, true, NotificationService.NOTI_REQUIRED)); 
 		  }
 		  else {
-			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.submit", "siteId=" + AgentFacade.getCurrentSiteId() + ", submissionId=" + adata.getAssessmentGradingId(), true));
+			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.submit", resource, true));
 		  }
 	  }
 	  else {
 		  if (this.actionMode == TAKE_ASSESSMENT_VIA_URL) // this is for accessing via published url
 		  {
 			  returnValue="anonymousThankYou";
-			  PublishedAssessmentService publishedAssessmentService = new PublishedAssessmentService();
-			  String siteId = publishedAssessmentService.getPublishedAssessmentOwner(adata.getPublishedAssessmentId());
-			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.timer_submit.url", "siteId=" + AgentFacade.getCurrentSiteId() + ", submissionId=" + adata.getAssessmentGradingId(), siteId, true, NotificationService.NOTI_REQUIRED));      
+			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.timer_submit.url", resource , siteId, true, NotificationService.NOTI_REQUIRED));
 		  }
 		  else {
-			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.timer_submit", "siteId=" + AgentFacade.getCurrentSiteId() + ", submissionId=" + adata.getAssessmentGradingId(), true));
+			  EventTrackingService.post(EventTrackingService.newEvent("sam.assessment.timer_submit", resource, true));
 		  }
 	  }
 	  forGrade = false;
@@ -1681,6 +1698,13 @@ public class DeliveryBean
 	 	     eventLogFacade.setData(eventLogData);
 	 	 
 	 	     eventService.saveOrUpdateEventLog(eventLogFacade);
+
+	 	     notificationValues.put("assessmentGradingID", local_assessmentGradingID);
+	 	     notificationValues.put("userID", adata.getAgentId());
+	 	     notificationValues.put("submissionDate", getSubmissionDateString());
+	 	     notificationValues.put("publishedAssessmentID", adata.getPublishedAssessmentId());
+
+	 	     EventTrackingService.post(EventTrackingService.newEvent(SamigoConstants.EVENT_ASSESSMENT_SUBMITTED, notificationValues.toString(), AgentFacade.getCurrentSiteId(), true, SamigoConstants.NOTI_EVENT_ASSESSMENT_SUBMITTED));
  
 	  return returnValue;
 	 }catch(Exception e) {
@@ -2137,20 +2161,20 @@ public class DeliveryBean
     log.debug("**** setting username=" + getSettings().getUsername());
     log.debug("**** setting password=" + getSettings().getPassword());
     
-    if (password == null && username == null)
+    if (StringUtils.isBlank(password) && StringUtils.isBlank(username))
     {
     	return "passwordAccessError";
     }
-    if(!"".equals(getSettings().getUsername()))
+    if(StringUtils.isNotBlank(getSettings().getUsername()))
     {
-    	if (username != null && !username.equals(getSettings().getUsername()))
+    	if (!StringUtils.equals(StringUtils.trim(username), StringUtils.trim(getSettings().getUsername())))
     	{
     		return "passwordAccessError";
     	}
     }
-    if(!"".equals(getSettings().getPassword()))
+    if(StringUtils.isNotBlank(getSettings().getPassword()))
     {
-    	if (password != null && !password.equals(getSettings().getPassword()))
+    	if (!StringUtils.equals(StringUtils.trim(password), StringUtils.trim(getSettings().getPassword())))
     	{
     		return "passwordAccessError";
     	}

@@ -3,14 +3,11 @@ package org.sakaiproject.gradebookng.rest;
 import java.util.List;
 import java.util.Map;
 
-import javax.xml.bind.JAXBException;
-
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.math.NumberUtils;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.entitybroker.EntityReference;
 import org.sakaiproject.entitybroker.EntityView;
-import org.sakaiproject.entitybroker.entityprovider.EntityProvider;
 import org.sakaiproject.entitybroker.entityprovider.annotations.EntityCustomAction;
 import org.sakaiproject.entitybroker.entityprovider.capabilities.ActionsExecutable;
 import org.sakaiproject.entitybroker.entityprovider.capabilities.AutoRegisterEntityProvider;
@@ -23,7 +20,6 @@ import org.sakaiproject.exception.PermissionException;
 import org.sakaiproject.gradebookng.business.GbRole;
 import org.sakaiproject.gradebookng.business.GradebookNgBusinessService;
 import org.sakaiproject.gradebookng.business.model.GbGradeCell;
-import org.sakaiproject.service.gradebook.shared.Assignment;
 import org.sakaiproject.site.api.SiteService;
 import org.sakaiproject.tool.api.SessionManager;
 
@@ -39,7 +35,7 @@ import lombok.Setter;
  *
  */
 public class GradebookNgEntityProvider extends AbstractEntityProvider implements
-		EntityProvider, AutoRegisterEntityProvider, ActionsExecutable,
+		AutoRegisterEntityProvider, ActionsExecutable,
 		Outputable, Describeable {
 
 	@Override
@@ -50,33 +46,6 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 	@Override
 	public String getEntityPrefix() {
 		return "gbng";
-	}
-
-	/**
-	 * site/assignment-list
-	 *
-	 * @throws IdUnusedException
-	 */
-	@EntityCustomAction(action = "assignments", viewKey = EntityView.VIEW_LIST)
-	public List<Assignment> getAssignmentList(final EntityView view) {
-
-		// get siteId
-		final String siteId = view.getPathSegment(2);
-
-		// check siteId supplied
-		if (StringUtils.isBlank(siteId)) {
-			throw new IllegalArgumentException(
-					"Site ID must be set in order to access GBNG data.");
-		}
-		checkValidSite(siteId);
-
-		// check instructor
-		checkInstructor(siteId);
-
-		// get assignment list
-		final List<Assignment> assignments = this.businessService.getGradebookAssignments(siteId);
-
-		return assignments;
 	}
 
 	/**
@@ -129,8 +98,8 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 		}
 		checkValidSite(siteId);
 
-		// check instructor
-		checkInstructor(siteId);
+		// check instructor or TA
+		checkInstructorOrTA(siteId);
 
 		// get notification list
 		// NOTE we assume the gradebook id and siteid are equivalent, which they are
@@ -158,14 +127,11 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 
 		// update the order
 		try {
-			this.businessService.updateCategorizedAssignmentOrder(siteId, assignmentId, order);
+			this.businessService.updateAssignmentCategorizedOrder(siteId, assignmentId, order);
 		} catch (final IdUnusedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (final PermissionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (final JAXBException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
@@ -189,6 +155,29 @@ public class GradebookNgEntityProvider extends AbstractEntityProvider implements
 
 		if (this.businessService.getUserRole(siteId) != GbRole.INSTRUCTOR) {
 			throw new SecurityException("You do not have instructor-type permissions in this site.");
+		}
+	}
+
+	/**
+	 * Helper to check if the user is an instructor or a TA. Throws IllegalArgumentException if not. We don't currently need the value that
+	 * this produces so we don't return it.
+	 *
+	 * @param siteId
+	 * @return
+	 * @throws SecurityException
+	 */
+	private void checkInstructorOrTA(final String siteId) {
+
+		final String currentUserId = getCurrentUserId();
+
+		if (StringUtils.isBlank(currentUserId)) {
+			throw new SecurityException("You must be logged in to access GBNG data");
+		}
+
+		final GbRole role = this.businessService.getUserRole(siteId);
+
+		if (role != GbRole.INSTRUCTOR && role != GbRole.TA) {
+			throw new SecurityException("You do not have instructor or TA-type permissions in this site.");
 		}
 	}
 

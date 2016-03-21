@@ -1,3 +1,5 @@
+@import "base/compass";
+
 .sitesNav__drop{
 	cursor: pointer;
 	display: inline-block;
@@ -7,6 +9,61 @@
 
 .blurry{
 	@include filter( blur(0.1em) );
+}
+
+.mobile_blocked{
+	@media #{$phone}{
+		display: inline;
+		td{
+			display: block;
+		}
+	}
+}
+
+.space_mobile{
+	@media #{$phone}{
+		background: darken( $background-color, 2% );
+		border-top:    1px solid darken( $background-color, 10% );
+		border-bottom: 1px solid darken( $background-color, 10% );
+		margin: 0.5em -1.02em;
+		padding: 1em 0.95em;
+		box-shadow: inset 0px 0px 7px 0px rgba(0,0,0,0.25);
+	}
+}
+
+@mixin bs-callout($color, $bgcolor) {
+  display: block;
+  margin: 20px 0;
+  padding: 15px 30px 15px 15px;
+  border: 1px solid;
+  border-left-width: 5px;
+  border-color: lighten($color, 25%);
+  border-left-color: $color;
+  background-color: $bgcolor;
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0;
+    color: $color;
+  }
+  p:last-child {
+    margin-bottom: 0;
+  }
+  code, .highlight {
+    background-color: #fff;
+  }
+}
+
+.bs-callout-primary, .bs-callout-info {
+  @include bs-callout($primary-color, lighten($primary-color, 45%));
+}
+
+.bs-callout-success {
+  @include bs-callout($okcolor, lighten($okcolor, 45%));
+}
+.bs-callout-warn, .bs-callout-alert {
+  @include bs-callout(darken($warncolor, 10%), $warncolor );
+}
+.bs-callout-danger, .bs-callout-error {
+  @include bs-callout(darken($errorcolor, 30%), $errorcolor );
 }
 
 @mixin icon( $width : $icon-size, $height : $icon-size ){
@@ -33,112 +90,92 @@
 
 .select{
 	background-color: $button-background-secondary-color;
-	background-image: inline-image("icon-arrow-down.png");
+	background-image: url("images/icon-arrow-down.png");
 	background-position: right 50%;
 	background-repeat: no-repeat;
-	border-top: 1px solid $button-border-color;
-	border-left: 1px solid $button-border-color;
-	border-right: 1px solid $button-border-color;
-	border-bottom: 1px solid rgba($button-border-color, 0.8);
+	border: 1px solid $button-border-color;
 	color: #777;
 	font-family: $font-family;
 	font-size: #{$default-font-size - 1};
-	max-width: 90%;
-	margin: 0 0 1em 0;
-	padding: 0.05em 2em 0em 0.5em;
+	padding: 0.3em 2.2em 0.3em 0.5em;
 	text-align: left;
+	max-width: 100%;
 	@include appearance(none);
 	@include border-radius(3px);
-	@include box-shadow( 0 3px 0px $button-border-color );
 	&::-ms-expand {
 	    display: none;
 	}
-	@media #{$phone}{
-		padding: 0.2em 2em 0.2em 0.5em;
+}
+
+@mixin sakai_button_color( $button-color-background-color, $button-color-border-color, $button-color-text-color, $button-color-background-secondary-color ){
+	background: $button-color-background-color;
+	border: 1px solid $button-color-border-color;
+	color: $button-color-text-color !important;
+	cursor: pointer;
+	font-family: $font-family;
+	font-size: #{$default-font-size - 2 };
+	letter-spacing: 0.8px;
+	line-height: 18px;
+	margin: 0.5em 0.8em 0.5em 0;
+	padding: 6px 10px 7px 12px;
+	position: relative;
+	text-decoration: none !important;
+	@include appearance(none);
+	@include border-radius(3px);
+	&:hover{
+		text-decoration: none;
+		background: linear-gradient( $button-color-background-color, $button-color-background-secondary-color );
+	}
+	&:active{
+		text-decoration: none;
+		outline: 0;
+		background: linear-gradient( $button-color-background-secondary-color, $button-color-background-color );
+	}
+	&[disabled="disabled"],&[disabled],&[disabled="true"]{
+		background: $button-color-background-color;
+		color: darken($button-background-color, 30% );
+		cursor: not-allowed;
+		opacity: 0.7;
 	}
 }
 
 .button_color, button {
-	color: $button-color-text-color;
+	@include sakai_button_color( $button-color-background-color, $button-color-border-color, $button-color-text-color, $button-color-background-secondary-color );
+}
+
+@mixin sakai_button( $button-background-color, $button-border-color, $button-text-color, $button-background-secondary-color ){
+	background: $button-background-color;
+	border: 1px solid $button-border-color;
+	color: $button-text-color !important;
 	cursor: pointer;
-	border-top: 1px solid $button-color-border-color;
-	border-left: 1px solid $button-color-border-color;
-	border-right: 1px solid $button-color-border-color;
-	border-bottom: 1px solid rgba( lighten( $button-color-background-secondary-color, 10% ) , 0.6);
+	display: inline-block;
 	font-family: $font-family;
-	font-size: #{$default-font-size - 1};
+	font-size: #{ $default-font-size - 2 };
 	letter-spacing: 0.8px;
 	margin: 0.5em 0.8em 0.5em 0;
-	padding: 0.2em 0.8em 0.25em 0.8em;
-	position: relative;
+	padding: 0.4em 0.8em 0.45em 0.8em;
+	text-decoration: none !important;
 	@include appearance(none);
-	@include background-image( linear-gradient( $button-color-background-color, $button-color-background-secondary-color ) );
-	@include box-shadow( 0 3px 0px $button-color-border-color );
 	@include border-radius(3px);
-	@include text-shadow( 0px 1px 3px rgba(0,0,0,0.35) );
 	&:hover{
-		background: $button-color-background-color;
+		text-decoration: none;
+		background: linear-gradient( $button-background-secondary-color, $button-background-color );
 	}
 	&:active{
-		border-bottom: 4px solid $button-color-background-color;
 		outline: 0;
-		padding: 0.2em 0.8em 0.25em 0.5em;
-		@include background-image( linear-gradient( $button-color-background-secondary-color, $button-color-background-color ) );
-		@include box-shadow( inset 0 3px 3px $button-color-border-color );
-		@media #{$phone}{
-			padding: 0.5em 1.2em 0.65em 1.2em;
-		}
+		text-decoration: none;
+		background: linear-gradient( $button-background-color, $button-background-secondary-color );
 	}
 	&[disabled="disabled"],&[disabled],&[disabled="true"]{
-		background: $button-color-background-color;
-		color: $button-background-color;
+		background: $button-background-color;
+		color: lighten( $button-text-color, 5% );
 		cursor: not-allowed;
 		opacity: 0.7;
-	}
-	@media #{$phone}{
-		padding: 0.5em 1.2em 0.65em 1.2em;
 	}
 }
 
-.button{
-	color: $button-text-color;
-	cursor: pointer;
-	border-top: 1px solid $button-border-color;
-	border-left: 1px solid $button-border-color;
-	border-right: 1px solid $button-border-color;
-	border-bottom: 1px solid rgba($button-background-secondary-color, 0.9);
-	display: inline-block;
-	font-family: $font-family;
-	font-size: #{$default-font-size - 1};
-	letter-spacing: 0.8px;
-	margin: 0.5em 0.8em 0.5em 0;
-	padding: 0.2em 0.8em 0.25em 0.8em;
-	text-decoration: none;
-	@include appearance(none);
-	@include background-image( linear-gradient( $button-background-secondary-color, $button-background-color ) );
-	@include box-shadow( 0 3px 0px $button-border-color );
-	@include border-radius(3px);
-	&:hover{
-		background: $button-background-color;
-	}
-	&:active{
-		border-bottom: 4px solid $button-background-secondary-color;
-		outline: 0;
-		@include background-image( linear-gradient( $button-background-color, $button-background-secondary-color ) );
-		@include box-shadow( inset 0 3px 3px $button-border-color );
-		@media #{$phone}{
-			padding: 0.5em 1.2em 0.65em 1.2em;
-		}
-	}
-	&[disabled="disabled"],&[disabled],&[disabled="true"]{
-		background: $button-background-color;
-		color: lighten( $button-text-color, 15% );
-		cursor: not-allowed;
-		opacity: 0.7;
-	}
-	@media #{$phone}{
-		padding: 0.5em 1.2em 0.65em 1.2em;
-	}
+.button, button.ui-state-default{
+	@include sakai_button( $button-background-color, $button-border-color, $button-text-color, $button-background-secondary-color );
 }
 
 a.noPointers, input.noPointers {
